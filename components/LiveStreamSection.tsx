@@ -379,14 +379,22 @@ export const LiveStreamSection: React.FC<LiveStreamSectionProps> = ({
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {isRunning && (
+              <div className="sm:col-span-3 p-3 bg-amber-500/10 dark:bg-amber-950/30 border border-amber-500/30 rounded-xl text-amber-800 dark:text-amber-200 text-xs font-bold flex items-center gap-2">
+                <i className="fas fa-lock text-amber-500 text-sm"></i>
+                <span>به علت فعال بودن پخش زنده روی سرور، تغییر تنظیمات کیفیت، فریم‌ریت و مدت زمان تا پایان استریم غیرفعال است.</span>
+              </div>
+            )}
+
             <div>
               <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1.5">
                 کیفیت تصویر
               </label>
               <select
+                disabled={isRunning}
                 value={quality}
                 onChange={e => setQuality(e.target.value)}
-                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-3 text-sm font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-3 text-sm font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-200 dark:disabled:bg-slate-800/40"
               >
                 <option value="240p">240p (بسیار سبک)</option>
                 <option value="360p">360p (سبک)</option>
@@ -402,9 +410,10 @@ export const LiveStreamSection: React.FC<LiveStreamSectionProps> = ({
                 نرخ فریم (FPS)
               </label>
               <select
+                disabled={isRunning}
                 value={fps}
                 onChange={e => setFps(parseInt(e.target.value))}
-                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-3 text-sm font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-3 text-sm font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-200 dark:disabled:bg-slate-800/40"
               >
                 <option value={15}>15 فریم (مصرف کمتر)</option>
                 <option value={20}>20 فریم</option>
@@ -418,9 +427,10 @@ export const LiveStreamSection: React.FC<LiveStreamSectionProps> = ({
                 مدت زمان (دقیقه)
               </label>
               <select
+                disabled={isRunning}
                 value={duration}
                 onChange={e => setDuration(parseInt(e.target.value))}
-                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-3 text-sm font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-3 text-sm font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-200 dark:disabled:bg-slate-800/40"
               >
                 <option value={15}>۱۵ دقیقه (تست سریع)</option>
                 <option value={30}>۳۰ دقیقه</option>

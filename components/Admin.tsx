@@ -12,6 +12,12 @@ import { formatJalaliDateTime, formatJalaliDate, formatJalaliTime } from '../per
 export const DEFAULT_SETTINGS: DisplaySettings = {
   fontSize: 40,
   scrollSpeed: 20,
+  fontSizeHigh: 64,
+  fontSizeMid: 48,
+  fontSizeLow: 36,
+  speedHigh: 14,
+  speedMid: 20,
+  speedLow: 24,
   highThreshold: 5000000,
   midThreshold: 1000000,
   fontHigh: 'Vazirmatn',
@@ -1311,7 +1317,7 @@ export const AdminPanel: React.FC<{
       `}>
         <div className="p-6 border-b border-slate-800 flex justify-between items-center">
           <div>
-             <h2 className="text-xl font-black text-yellow-500">پنل مدیریت اکرام</h2>
+             <h2 className="text-xl font-black text-yellow-500">سامانه ی جامع طرح اکرام و باقیات الصالحات</h2>
              <p className="text-xs text-slate-400 mt-1">خوش آمدید، {currentUser.displayName || currentUser.username}</p>
           </div>
           <button onClick={() => setMobileMenuOpen(false)} className="md:hidden text-slate-400 hover:text-white transition-all">
@@ -1715,17 +1721,122 @@ export const AdminPanel: React.FC<{
                     <div className="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-xl border border-slate-200 dark:border-slate-700/60 space-y-3">
                       <div>
                         <div className="flex justify-between text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">
-                          <span>سایز قلم اسامی لیست:</span>
+                          <span>سایز قلم کلی اسامی (پیش‌فرض):</span>
                           <span className="font-mono text-blue-600 dark:text-blue-400">{settings.fontSize}px</span>
                         </div>
                         <input type="range" min="20" max="100" className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer" value={settings.fontSize} onChange={e=>handleUpdateSettings({fontSize: parseInt(e.target.value)})} />
                       </div>
                       <div>
                         <div className="flex justify-between text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">
-                          <span>سرعت حرکت نمایشگر:</span>
+                          <span>سرعت حرکت کلی (پیش‌فرض):</span>
                           <span className="font-mono text-blue-600 dark:text-blue-400">{settings.scrollSpeed}</span>
                         </div>
                         <input type="range" min="5" max="100" className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer" style={{direction: 'ltr'}} value={settings.scrollSpeed} onChange={e=>handleUpdateSettings({scrollSpeed: parseInt(e.target.value)})} />
+                      </div>
+                    </div>
+
+                    {/* تنظیمات اختصاصی سرعت و سایز فونت برای هر خط از اسامی */}
+                    <div className="md:col-span-2 bg-slate-50 dark:bg-slate-800/60 p-4 md:p-5 rounded-2xl border border-slate-200 dark:border-slate-700/60 space-y-4">
+                      <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-700/80 pb-2">
+                        <h4 className="text-xs font-black text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                          <i className="fas fa-text-height text-blue-500"></i> تنظیمات اختصاصی سرعت و اندازه فونت برای هر خط
+                        </h4>
+                        <span className="text-[10px] text-slate-400">امکان سفارشی‌سازی دقیق‌تر قلم و سرعت اسامی در ۳ سطح نمایشگر</span>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {/* خط بالا - سطح ویژه */}
+                        <div className="p-3.5 bg-yellow-500/10 dark:bg-yellow-900/20 rounded-xl border border-yellow-500/30 space-y-3">
+                          <span className="text-xs font-bold text-yellow-700 dark:text-yellow-400 block border-b border-yellow-500/20 pb-1 flex items-center justify-between">
+                            <span>⭐ خط بالا (سطح ویژه)</span>
+                          </span>
+                          <div>
+                            <div className="flex justify-between text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">
+                              <span>اندازه فونت:</span>
+                              <span className="font-mono text-yellow-600 dark:text-yellow-400">{settings.fontSizeHigh ?? 64}px</span>
+                            </div>
+                            <input 
+                              type="range" min="20" max="120" 
+                              className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer" 
+                              value={settings.fontSizeHigh ?? 64} 
+                              onChange={e=>handleUpdateSettings({fontSizeHigh: parseInt(e.target.value)})} 
+                            />
+                          </div>
+                          <div>
+                            <div className="flex justify-between text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">
+                              <span>سرعت حرکت:</span>
+                              <span className="font-mono text-yellow-600 dark:text-yellow-400">{settings.speedHigh ?? 14}</span>
+                            </div>
+                            <input 
+                              type="range" min="5" max="100" style={{direction: 'ltr'}} 
+                              className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer" 
+                              value={settings.speedHigh ?? 14} 
+                              onChange={e=>handleUpdateSettings({speedHigh: parseInt(e.target.value)})} 
+                            />
+                          </div>
+                        </div>
+
+                        {/* خط وسط - سطح متوسط */}
+                        <div className="p-3.5 bg-blue-500/10 dark:bg-blue-900/20 rounded-xl border border-blue-500/30 space-y-3">
+                          <span className="text-xs font-bold text-blue-700 dark:text-blue-400 block border-b border-blue-500/20 pb-1 flex items-center justify-between">
+                            <span>🔹 خط وسط (سطح متوسط)</span>
+                          </span>
+                          <div>
+                            <div className="flex justify-between text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">
+                              <span>اندازه فونت:</span>
+                              <span className="font-mono text-blue-600 dark:text-blue-400">{settings.fontSizeMid ?? 48}px</span>
+                            </div>
+                            <input 
+                              type="range" min="20" max="120" 
+                              className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer" 
+                              value={settings.fontSizeMid ?? 48} 
+                              onChange={e=>handleUpdateSettings({fontSizeMid: parseInt(e.target.value)})} 
+                            />
+                          </div>
+                          <div>
+                            <div className="flex justify-between text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">
+                              <span>سرعت حرکت:</span>
+                              <span className="font-mono text-blue-600 dark:text-blue-400">{settings.speedMid ?? 20}</span>
+                            </div>
+                            <input 
+                              type="range" min="5" max="100" style={{direction: 'ltr'}} 
+                              className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer" 
+                              value={settings.speedMid ?? 20} 
+                              onChange={e=>handleUpdateSettings({speedMid: parseInt(e.target.value)})} 
+                            />
+                          </div>
+                        </div>
+
+                        {/* خط پایین - سطح عمومی */}
+                        <div className="p-3.5 bg-slate-500/10 dark:bg-slate-800/40 rounded-xl border border-slate-300 dark:border-slate-700 space-y-3">
+                          <span className="text-xs font-bold text-slate-700 dark:text-slate-300 block border-b border-slate-300 dark:border-slate-700 pb-1 flex items-center justify-between">
+                            <span>🔸 خط پایین (سطح عمومی)</span>
+                          </span>
+                          <div>
+                            <div className="flex justify-between text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">
+                              <span>اندازه فونت:</span>
+                              <span className="font-mono text-slate-700 dark:text-slate-300">{settings.fontSizeLow ?? 36}px</span>
+                            </div>
+                            <input 
+                              type="range" min="20" max="120" 
+                              className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer" 
+                              value={settings.fontSizeLow ?? 36} 
+                              onChange={e=>handleUpdateSettings({fontSizeLow: parseInt(e.target.value)})} 
+                            />
+                          </div>
+                          <div>
+                            <div className="flex justify-between text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">
+                              <span>سرعت حرکت:</span>
+                              <span className="font-mono text-slate-700 dark:text-slate-300">{settings.speedLow ?? 24}</span>
+                            </div>
+                            <input 
+                              type="range" min="5" max="100" style={{direction: 'ltr'}} 
+                              className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer" 
+                              value={settings.speedLow ?? 24} 
+                              onChange={e=>handleUpdateSettings({speedLow: parseInt(e.target.value)})} 
+                            />
+                          </div>
+                        </div>
                       </div>
                     </div>
 

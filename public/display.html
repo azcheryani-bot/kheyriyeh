@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>نمایشگر زنده مراسم</title>
+    <title>سامانه ی جامع طرح اکرام و باقیات الصالحات - نمایشگر زنده</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -122,6 +122,12 @@
         const DEFAULT_SETTINGS = {
             fontSize: 40,
             scrollSpeed: 20,
+            fontSizeHigh: 64,
+            fontSizeMid: 48,
+            fontSizeLow: 36,
+            speedHigh: 14,
+            speedMid: 20,
+            speedLow: 24,
             highThreshold: 5000000,
             midThreshold: 1000000,
             fontHigh: 'Vazirmatn',
@@ -246,7 +252,14 @@
         function render() {
             const isMobile = window.innerWidth < 768;
             const fontScale = isMobile ? 0.5 : 1;
-            const baseFontSize = currentSettings.fontSize * fontScale;
+
+            const speedHigh = currentSettings.speedHigh ?? Math.round((currentSettings.scrollSpeed || 20) * 0.7);
+            const speedMid = currentSettings.speedMid ?? (currentSettings.scrollSpeed || 20);
+            const speedLow = currentSettings.speedLow ?? Math.round((currentSettings.scrollSpeed || 20) * 1.2);
+
+            const fontSizeHigh = (currentSettings.fontSizeHigh ?? Math.round((currentSettings.fontSize || 40) * 1.6)) * fontScale;
+            const fontSizeMid = (currentSettings.fontSizeMid ?? Math.round((currentSettings.fontSize || 40) * 1.2)) * fontScale;
+            const fontSizeLow = (currentSettings.fontSizeLow ?? Math.round((currentSettings.fontSize || 40) * 0.9)) * fontScale;
 
             // اطلاعیه تمام‌صفحه
             const overlay = document.getElementById('announcementOverlay');
@@ -307,15 +320,15 @@
             const low = visibleDonations.filter(d => d.amount < currentSettings.midThreshold);
 
             // رندر نوارهای متحرک
-            renderMarqueeRow('highMarquee', high, currentSettings.scrollSpeed * 0.7, baseFontSize * 1.6, currentSettings.fontHigh, 
+            renderMarqueeRow('highMarquee', high, speedHigh, fontSizeHigh, currentSettings.fontHigh, 
                 "bg-gradient-to-r from-yellow-900/30 via-yellow-900/10 to-yellow-900/30 border-yellow-500/20 border-b border-white/10 backdrop-blur-sm shadow-lg", 
                 "border-b border-white/5 bg-black/10 backdrop-blur-sm");
                 
-            renderMarqueeRow('midMarquee', mid, currentSettings.scrollSpeed, baseFontSize * 1.2, currentSettings.fontMid, 
+            renderMarqueeRow('midMarquee', mid, speedMid, fontSizeMid, currentSettings.fontMid, 
                 "bg-gradient-to-r from-blue-900/30 via-blue-900/10 to-blue-900/30 border-blue-500/20 border-b border-white/10 backdrop-blur-sm shadow-lg", 
                 "border-b border-white/5 bg-black/10 backdrop-blur-sm");
                 
-            renderMarqueeRow('lowMarquee', low, currentSettings.scrollSpeed * 1.2, baseFontSize * 0.9, currentSettings.fontLow, 
+            renderMarqueeRow('lowMarquee', low, speedLow, fontSizeLow, currentSettings.fontLow, 
                 "bg-gradient-to-r from-slate-900/40 via-slate-800/20 to-slate-900/40 border-white/5 border-b border-white/10 backdrop-blur-sm shadow-lg", 
                 "border-b border-white/5 bg-black/10 backdrop-blur-sm");
         }

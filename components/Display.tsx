@@ -6,6 +6,12 @@ import { Donation, DisplaySettings } from '../types';
 const DEFAULT_SETTINGS: DisplaySettings = {
   fontSize: 40,
   scrollSpeed: 20,
+  fontSizeHigh: 64,
+  fontSizeMid: 48,
+  fontSizeLow: 36,
+  speedHigh: 14,
+  speedMid: 20,
+  speedLow: 24,
   highThreshold: 5000000,
   midThreshold: 1000000,
   fontHigh: 'Vazirmatn',
@@ -208,7 +214,13 @@ export const DisplayCore: React.FC<{ onExit: () => void }> = ({ onExit }) => {
   }
 
   const fontScale = isMobile ? 0.5 : 1;
-  const baseFontSize = settings.fontSize * fontScale;
+  const speedHigh = settings.speedHigh ?? Math.round((settings.scrollSpeed || 20) * 0.7);
+  const speedMid = settings.speedMid ?? (settings.scrollSpeed || 20);
+  const speedLow = settings.speedLow ?? Math.round((settings.scrollSpeed || 20) * 1.2);
+
+  const fontSizeHigh = (settings.fontSizeHigh ?? Math.round((settings.fontSize || 40) * 1.6)) * fontScale;
+  const fontSizeMid = (settings.fontSizeMid ?? Math.round((settings.fontSize || 40) * 1.2)) * fontScale;
+  const fontSizeLow = (settings.fontSizeLow ?? Math.round((settings.fontSize || 40) * 0.9)) * fontScale;
 
   return (
     <div className="relative w-full h-screen overflow-hidden bg-slate-950 font-sans select-none" dir="ltr">
@@ -266,24 +278,24 @@ export const DisplayCore: React.FC<{ onExit: () => void }> = ({ onExit }) => {
         <div className="flex-grow flex flex-col w-full min-h-0 bg-black/10">
           <MarqueeRow 
             list={tiers.high} 
-            speed={settings.scrollSpeed * 0.7}
-            fontSize={baseFontSize * 1.6} 
+            speed={speedHigh}
+            fontSize={fontSizeHigh} 
             font={settings.fontHigh}
             heightClass="h-[38%]"
             colorClass="bg-gradient-to-r from-yellow-900/30 via-yellow-900/10 to-yellow-900/30 border-yellow-500/20"
           />
           <MarqueeRow 
             list={tiers.mid} 
-            speed={settings.scrollSpeed} 
-            fontSize={baseFontSize * 1.2} 
+            speed={speedMid} 
+            fontSize={fontSizeMid} 
             font={settings.fontMid}
             heightClass="h-[32%]"
             colorClass="bg-gradient-to-r from-blue-900/30 via-blue-900/10 to-blue-900/30 border-blue-500/20"
           />
           <MarqueeRow 
             list={tiers.low} 
-            speed={settings.scrollSpeed * 1.2} 
-            fontSize={baseFontSize * 0.9} 
+            speed={speedLow} 
+            fontSize={fontSizeLow} 
             font={settings.fontLow}
             heightClass="h-[30%]"
             colorClass="bg-gradient-to-r from-slate-900/40 via-slate-800/20 to-slate-900/40 border-white/5"

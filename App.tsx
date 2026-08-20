@@ -139,7 +139,7 @@ const App: React.FC = () => {
           </div>
 
           <div className="relative z-10 text-center space-y-6">
-             <h1 className="text-6xl md:text-8xl font-black text-slate-800 dark:text-white tracking-tighter drop-shadow-xl">سامانه جامع <span className="text-yellow-500">اکرام</span></h1>
+             <h1 className="text-4xl sm:text-6xl md:text-7xl font-black text-slate-800 dark:text-white tracking-tighter drop-shadow-xl">سامانه ی جامع <span className="text-yellow-500">طرح اکرام و باقیات الصالحات</span></h1>
              <p className="text-slate-600 dark:text-slate-400 text-sm md:text-xl max-w-2xl mx-auto leading-relaxed">سیستم هوشمند مدیریت مراسم‌های خیریه، ثبت مبالغ پرداخت و نمایشگر زنده.</p>
           </div>
 

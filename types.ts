@@ -56,6 +56,12 @@ export interface Admin {
 export interface DisplaySettings {
   fontSize: number;
   scrollSpeed: number;
+  fontSizeHigh?: number;
+  fontSizeMid?: number;
+  fontSizeLow?: number;
+  speedHigh?: number;
+  speedMid?: number;
+  speedLow?: number;
   highThreshold: number;
   midThreshold: number;
   fontHigh: string;
