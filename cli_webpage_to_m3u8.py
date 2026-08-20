@@ -95,8 +95,8 @@ def main():
         '360p': ('640x360', 640, 360, '800k'),
         '480p': ('854x480', 854, 480, '1200k'),
         '720p': ('1280x720', 1280, 720, '2500k'),
-        '1080p': ('1920x1080', 1920, 1080, '4500k'),
-        '1440p': ('2560x1440', 2560, 1440, '9000k')
+        '1080p': ('1920x1080', 1920, 1080, '3500k'),
+        '1440p': ('2560x1440', 2560, 1440, '3500k')
     }
     resolution_str, width, height, bitrate = qualities.get(args.quality, qualities['720p'])
     fps = args.fps
@@ -159,7 +159,11 @@ def main():
     subprocess.Popen(chrome_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(5)  # زمان لازم برای لود کامل صفحه اینترنتی و برقراری ارتباطات
 
-    # ۵. ضبط تصویر بدون نشانگر ماوس (-draw_mouse 0) و با کمترین تاخیر
+    # ۵. ضبط تصویر و صدا مطابق با «استاندارد طلایی سازگاری LG webOS»
+    # مشخصات ویدیویی: H.264 Main Profile L4.0 / keyint هر ۲ ثانیه‌ / sc_threshold 0
+    # مشخصات صوتی: AAC-LC 128k 48kHz Stereo / چانک‌های MPEG-TS با طول ۴ ثانیه
+    gop_size = str(fps * 2)  # کلیدفریم دقیقاً هر ۲ ثانیه (GOP = fps * 2)
+
     ffmpeg_cmd = [
         'ffmpeg', '-y',
         '-f', 'x11grab',
@@ -167,17 +171,28 @@ def main():
         '-video_size', f'{width}x{height}',
         '-framerate', str(fps),
         '-i', ':99.0',
+        '-f', 'lavfi',
+        '-i', 'anullsrc=channel_layout=stereo:sample_rate=48000',
         '-c:v', 'libx264',
-        '-preset', 'ultrafast',
-        '-tune', 'zerolatency',
+        '-profile:v', 'main',
+        '-level', '4.0',
+        '-preset', 'fast',
         '-b:v', bitrate,
         '-maxrate', bitrate,
-        '-bufsize', str(int(bitrate.replace('k',''))*2) + 'k',
+        '-bufsize', '5000k',
         '-pix_fmt', 'yuv420p',
-        '-g', str(fps * 2),
+        '-g', gop_size,
+        '-keyint_min', gop_size,
+        '-sc_threshold', '0',
+        '-c:a', 'aac',
+        '-profile:a', 'aac_low',
+        '-b:a', '128k',
+        '-ar', '48000',
+        '-ac', '2',
         '-f', 'hls',
-        '-hls_time', '2',
+        '-hls_time', '4',
         '-hls_list_size', '5',
+        '-hls_segment_type', 'mpegts',
         '-hls_flags', 'delete_segments',
         'live.m3u8'
     ]
@@ -191,6 +206,11 @@ def main():
     neon_stream_url = f"{S3_ENDPOINT}/{BUCKET_NAME}/live.m3u8"
     print("\n" + "="*60)
     print(f"🚀 استریم صفحه آنلاین در کیفیت {args.quality} ({width}x{height}) آغاز شد!")
+    print("📺 تنظیمات استاندارد طلایی سازگاری با تلویزیون‌های LG (webOS) فعال است:")
+    print("   • کدک ویدیو: H.264 Main Profile @ Level 4.0 (Constrained VBR)")
+    print(f"   • کلید فریم (GOP): هر ۲ ثانیه یک کلیدفریم (keyint={gop_size})")
+    print("   • کدک صدا: AAC-LC Stereo 128kbps @ 48kHz")
+    print("   • بسته بندی HLS: چانک های MPEG-TS با طول ۴ ثانیه")
     print(f"🌐 آدرس در حال پخش: {target_web_url}")
     print(f"🔗 آدرس خروجی استریم: {neon_stream_url}")
     print("="*60 + "\n")
