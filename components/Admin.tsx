@@ -1850,35 +1850,11 @@ export const AdminPanel: React.FC<{
                   {/* Section 4: Line Speeds & Font Sizes */}
                   <div className="space-y-4 pt-4 border-t border-slate-100 dark:border-slate-800">
                     <h4 className="text-xs font-black text-slate-700 dark:text-slate-300 flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-2">
-                      <i className="fas fa-text-height text-blue-500"></i> تنظیمات اختصاصی سرعت و اندازه فونت برای هر خط
+                      <i className="fas fa-text-height text-blue-500"></i> تنظیمات سرعت و اندازه فونت برای هر خط
                     </h4>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-xl border border-slate-200 dark:border-slate-700/60 space-y-3">
-                        <div>
-                          <div className="flex justify-between text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">
-                            <span>سایز قلم کلی اسامی (پیش‌فرض):</span>
-                            <span className="font-mono text-blue-600 dark:text-blue-400">{settings.fontSize}px</span>
-                          </div>
-                          <input type="range" min="20" max="100" className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer" value={settings.fontSize} onChange={e=>handleUpdateSettings({fontSize: parseInt(e.target.value)})} />
-                        </div>
-                        <div>
-                          <div className="flex justify-between text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">
-                            <span>سرعت حرکت کلی (پیش‌فرض):</span>
-                            <span className="font-mono text-blue-600 dark:text-blue-400">{settings.scrollSpeed}</span>
-                          </div>
-                          <input type="range" min="5" max="100" className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer" style={{direction: 'ltr'}} value={settings.scrollSpeed} onChange={e=>handleUpdateSettings({scrollSpeed: parseInt(e.target.value)})} />
-                        </div>
-                      </div>
-
-                      <div className="md:col-span-2 bg-slate-50 dark:bg-slate-800/60 p-4 md:p-5 rounded-2xl border border-slate-200 dark:border-slate-700/60 space-y-4">
-                        <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-700/80 pb-2">
-                          <h5 className="text-xs font-black text-slate-800 dark:text-slate-200 flex items-center gap-2">
-                            <i className="fas fa-sliders-h text-blue-500"></i> سفارشی‌سازی دقیق‌تر قلم و سرعت اسامی در ۳ سطح نمایشگر
-                          </h5>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="bg-slate-50 dark:bg-slate-800/60 p-4 md:p-5 rounded-2xl border border-slate-200 dark:border-slate-700/60 space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                           {/* خط بالا - سطح ویژه */}
                           <div className="p-3.5 bg-yellow-500/10 dark:bg-yellow-900/20 rounded-xl border border-yellow-500/30 space-y-3">
                             <span className="text-xs font-bold text-yellow-700 dark:text-yellow-400 block border-b border-yellow-500/20 pb-1 flex items-center justify-between">
@@ -1971,6 +1947,50 @@ export const AdminPanel: React.FC<{
                               />
                             </div>
                           </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+              {/* Sub-tab 2: Images (تصاویر) */}
+              {settingsSubTab === 'images' && (
+                <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-6">
+                  <div>
+                    <h3 className="font-black text-slate-800 dark:text-slate-100 text-base flex items-center gap-2 mb-1">
+                      <i className="fas fa-image text-emerald-500"></i> تصاویر و پس‌زمینه سالن
+                    </h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">عکس مرحوم، تصویر زمینه نمایشگر سالن و تصویر اطلاعیه تمام‌صفحه</p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-slate-600 dark:text-slate-400">عکس مرحوم</label>
+                      <div className="h-44 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-2xl flex flex-col items-center justify-center relative overflow-hidden group cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 transition-all bg-white dark:bg-slate-900">
+                        {settings.deceasedImage ? <img src={settings.deceasedImage} className="w-full h-full object-cover" /> : <div className="text-center p-4"><i className="fas fa-camera text-slate-300 dark:text-slate-600 text-3xl mb-2 block"></i><span className="text-xs text-slate-400">برای آپلود کلیک کنید</span></div>}
+                        <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={e=>e.target.files && handleFileUpload(e.target.files[0], 'deceasedImage')} />
+                        {settings.deceasedImage && <button onClick={()=>handleUpdateSettings({deceasedImage: ''})} className="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-all shadow-md"><i className="fas fa-times text-xs"></i></button>}
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-slate-600 dark:text-slate-400">تصویر پس‌زمینه</label>
+                      <div className="h-44 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-2xl flex flex-col items-center justify-center relative overflow-hidden group cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 transition-all bg-white dark:bg-slate-900">
+                        {settings.bgImage ? <img src={settings.bgImage} className="w-full h-full object-cover" /> : <div className="text-center p-4"><i className="fas fa-image text-slate-300 dark:text-slate-600 text-3xl mb-2 block"></i><span className="text-xs text-slate-400">برای آپلود کلیک کنید</span></div>}
+                        <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={e=>e.target.files && handleFileUpload(e.target.files[0], 'bgImage')} />
+                        {settings.bgImage && <button onClick={()=>handleUpdateSettings({bgImage: ''})} className="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-all shadow-md"><i className="fas fa-times text-xs"></i></button>}
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-slate-600 dark:text-slate-400">تصویر اطلاعیه (Full Screen)</label>
+                      <div className="h-44 border-2 border-dashed border-orange-300 dark:border-orange-800 rounded-2xl flex flex-col items-center justify-center relative overflow-hidden group cursor-pointer hover:bg-orange-50/50 dark:hover:bg-orange-950/20 transition-all bg-white dark:bg-slate-900">
+                        {settings.announcementImage ? <img src={settings.announcementImage} className="w-full h-full object-cover" /> : <div className="text-center p-4"><i className="fas fa-scroll text-orange-300 dark:text-orange-700 text-3xl mb-2 block"></i><span className="text-xs text-orange-400">برای آپلود کلیک کنید</span></div>}
+                        <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={e=>e.target.files && handleFileUpload(e.target.files[0], 'announcementImage')} />
+                        {settings.announcementImage && <button onClick={()=>handleUpdateSettings({announcementImage: ''})} className="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-all shadow-md"><i className="fas fa-times text-xs"></i></button>}
+                        <div className="absolute bottom-2 right-2 bg-white/90 dark:bg-slate-900/90 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 flex items-center gap-1.5">
+                          <input type="checkbox" checked={settings.showAnnouncement} onChange={(e)=>{e.stopPropagation(); handleUpdateSettings({showAnnouncement: e.target.checked})}} className="w-4 h-4 accent-orange-600 cursor-pointer" id="show-announcement-chk" />
+                          <label htmlFor="show-announcement-chk" className="text-[10px] font-bold text-slate-700 dark:text-slate-300 cursor-pointer">نمایش در سالن</label>
                         </div>
                       </div>
                     </div>
