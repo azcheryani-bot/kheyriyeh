@@ -1487,9 +1487,6 @@ export const AdminPanel: React.FC<{
                 </div>
 
                 <div className="flex gap-2 items-center flex-wrap">
-                  <button onClick={selectDirectory} className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-2 transition-all shadow-sm whitespace-nowrap ${directoryHandle ? 'bg-slate-700 text-white' : 'bg-emerald-600 hover:bg-emerald-700 text-white animate-pulse'}`}>
-                    <i className="fas fa-folder-open"></i> {directoryHandle ? '✔ پوشه متصل شد' : '۱. انتخاب پوشه ذخیره (OBS)'}
-                  </button>
                   <button onClick={exportExcel} className="bg-green-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-green-700 flex items-center gap-2 transition-all shadow-sm whitespace-nowrap"><i className="fas fa-file-excel"></i> خروجی اکسل</button>
                   <button onClick={()=>handlePrint(true)} className="bg-blue-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-blue-600 flex items-center gap-2 transition-all shadow-sm whitespace-nowrap"><i className="fas fa-print"></i> چاپ با مبلغ</button>
                   <button onClick={()=>handlePrint(false)} className="bg-slate-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-slate-600 flex items-center gap-2 transition-all shadow-sm whitespace-nowrap"><i className="fas fa-print"></i> چاپ بدون مبلغ</button>
