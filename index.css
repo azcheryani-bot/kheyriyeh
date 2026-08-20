@@ -1,0 +1,6 @@
+/* Custom global styles */
+@layer base {
+  html.dark {
+    color-scheme: dark;
+  }
+}

@@ -1,0 +1,56 @@
+name: 🚀 Run M3U8 Streamer (Neon Storage)
+
+on:
+  workflow_dispatch:
+    inputs:
+      quality:
+        description: 'Stream Quality (Resolution)'
+        required: true
+        default: '720p'
+        type: choice
+        options:
+          - '240p'
+          - '360p'
+          - '480p'
+          - '720p'
+          - '1080p'
+          - '1440p'
+      fps:
+        description: 'Frames Per Second (FPS)'
+        required: true
+        default: '30'
+        type: choice
+        options:
+          - '15'
+          - '20'
+          - '30'
+          - '60'
+      duration:
+        description: 'Duration to run in minutes (Max 360 mins on GitHub)'
+        required: true
+        default: '60'
+        type: string
+
+jobs:
+  stream:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: 📦 Install Server Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb ffmpeg
+          python -m pip install --upgrade pip
+          pip install flask boto3 requests
+
+      - name: 🎬 Run Streamer
+        run: |
+          python -u cli_webpage_to_m3u8.py --quality "${{ github.event.inputs.quality }}" --fps "${{ github.event.inputs.fps }}" --duration "${{ github.event.inputs.duration }}"

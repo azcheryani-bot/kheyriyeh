@@ -1,0 +1,98 @@
+name: SMS Proxy Bridge
+on:
+  workflow_dispatch:
+    inputs:
+      callback_url:
+        description: 'URL to send the tunnel URL to'
+        required: false
+        type: string
+
+jobs:
+  run-sms-bridge:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        run: |
+          npm install express axios socks-proxy-agent
+
+      - name: Start Xray Proxy
+        run: |
+          wget https://github.com/XTLS/Xray-core/releases/download/v1.8.4/Xray-linux-64.zip
+          unzip Xray-linux-64.zip
+          cat << 'EOF' > config.json
+          {
+            "inbounds": [
+              {
+                "port": 1080,
+                "listen": "127.0.0.1",
+                "protocol": "socks",
+                "settings": {
+                  "auth": "noauth",
+                  "udp": true
+                }
+              }
+            ],
+            "outbounds": [
+              {
+                "protocol": "vmess",
+                "settings": {
+                  "vnext": [
+                    {
+                      "address": "129.146.143.80",
+                      "port": 48111,
+                      "users": [
+                        {
+                          "id": "d4603cc2-e0ee-4651-83f5-1db5b7168177",
+                          "alterId": 0,
+                          "security": "auto"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "streamSettings": {
+                  "network": "tcp"
+                }
+              }
+            ]
+          }
+          EOF
+          ./xray -c config.json &
+          sleep 3
+
+      - name: Start SMS Bridge Server
+        run: |
+          node sms-bridge.js &
+          sleep 3
+
+      - name: Start Cloudflare Tunnel
+        run: |
+          wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
+          sudo dpkg -i cloudflared-linux-amd64.deb
+          
+          cloudflared tunnel --url http://127.0.0.1:3005 > tunnel.log 2>&1 &
+          sleep 10
+          TUNNEL_URL=$(grep -o 'https://[-0-9a-zA-Z]*\.trycloudflare\.com' tunnel.log | head -1)
+          echo "Tunnel URL: $TUNNEL_URL"
+          
+          if [ -z "$TUNNEL_URL" ]; then
+            echo "Failed to get tunnel URL"
+            cat tunnel.log
+            exit 1
+          fi
+
+          CALLBACK_URL="${{ github.event.inputs.callback_url }}"
+          if [ ! -z "$CALLBACK_URL" ]; then
+            curl -X POST -H "Content-Type: application/json" -d "{\"url\":\"$TUNNEL_URL\"}" "$CALLBACK_URL"
+          fi
+          
+          # Keep alive for 5 hours and 55 minutes
+          sleep 21300
