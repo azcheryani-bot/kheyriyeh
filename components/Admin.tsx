@@ -240,7 +240,7 @@ const SmsProxyManager: React.FC<{ settings: any; isSuperAdmin: boolean }> = ({ s
   );
 };
 
-type SettingsSubTab = 'general' | 'images' | 'sms' | 'admins' | 'stream';
+type SettingsSubTab = 'obs_mode' | 'direct_display' | 'sms' | 'admins';
 
 export const AdminPanel: React.FC<{ 
   currentUser: Admin; 
@@ -255,7 +255,7 @@ export const AdminPanel: React.FC<{
   const [activeEventId, setActiveEventId] = useState<string | null>(null);
   const [admins, setAdmins] = useState<Admin[]>([]);
   const [internalTab, setInternalTab] = useState<'donations' | 'settings' | 'events'>('donations');
-  const [settingsSubTab, setSettingsSubTab] = useState<SettingsSubTab>('general');
+  const [settingsSubTab, setSettingsSubTab] = useState<SettingsSubTab>('obs_mode');
 
   // Normalize activeTab so that 'admins' and 'stream' navigate to settings sub-tabs
   const activeTab: 'donations' | 'settings' | 'events' = 
@@ -270,7 +270,7 @@ export const AdminPanel: React.FC<{
       if (onTabChange) onTabChange('settings');
     } else if (tab === 'stream') {
       setInternalTab('settings');
-      setSettingsSubTab('stream');
+      setSettingsSubTab('direct_display');
       if (onTabChange) onTabChange('settings');
     } else {
       setInternalTab(tab as 'donations' | 'settings' | 'events');
@@ -282,7 +282,7 @@ export const AdminPanel: React.FC<{
     if (externalTab === 'admins') {
       setSettingsSubTab('admins');
     } else if (externalTab === 'stream') {
-      setSettingsSubTab('stream');
+      setSettingsSubTab('direct_display');
     }
   }, [externalTab]);
 
@@ -1655,21 +1655,91 @@ export const AdminPanel: React.FC<{
                   </div>
                   <div>
                     <h2 className="font-black text-slate-800 dark:text-slate-100 text-lg">تنظیمات و پیکربندی سامانه</h2>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">پیکربندی عمومی و متون نمایشگر، فونت‌ها و سطوح، تصاویر، پیامک، مدیران و پخش زنده</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">مدیریت دو حالت اصلی سامانه (خروجی متنی OBS / نمایشگر مستقیم وب)، پیامک و مدیران</p>
                   </div>
                 </div>
               </div>
 
-              {/* Tabbed Navigation Bar */}
+              {/* Top Mode Selector Guidance Card */}
+              <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-5 md:p-6 rounded-3xl shadow-xl space-y-4 border border-indigo-900/50">
+                <div className="flex items-center justify-between flex-wrap gap-3">
+                  <div>
+                    <h3 className="text-base md:text-lg font-black flex items-center gap-2">
+                      <i className="fas fa-sliders-h text-yellow-400"></i>
+                      <span>راهنمای انتخاب و تنظیم حالت عملکرد سامانه</span>
+                    </h3>
+                    <p className="text-xs text-slate-300 mt-1 leading-relaxed">
+                      این سامانه جهت نمایش اسامی خیّرین دارای دو حالت مستقل کاری است. لطفا حالت مورد نظر خود را برای پیکربندی انتخاب نمایید:
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+                  {/* Mode 1 Button / Card */}
+                  <div 
+                    onClick={() => setSettingsSubTab('obs_mode')}
+                    className={`p-4 rounded-2xl border transition-all cursor-pointer flex items-start gap-3.5 relative overflow-hidden ${
+                      settingsSubTab === 'obs_mode'
+                        ? 'bg-blue-600/30 border-blue-400 text-white ring-2 ring-blue-400/50 shadow-lg'
+                        : 'bg-white/5 border-white/10 hover:bg-white/10 text-slate-300'
+                    }`}
+                  >
+                    <div className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 text-lg ${
+                      settingsSubTab === 'obs_mode' ? 'bg-blue-500 text-white shadow-md' : 'bg-slate-800 text-blue-400'
+                    }`}>
+                      <i className="fas fa-file-code"></i>
+                    </div>
+                    <div className="space-y-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-black text-sm text-white">حالت ۱: خروجی فایل OBS</span>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-500/30 text-blue-300 border border-blue-400/30">
+                          تولید فایل txt
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-300 leading-relaxed">
+                        تولید فایل‌های متنی روی سیستم شما برای خوانده شدن توسط نرم‌افزار OBS و قرارگیری روی استریم محلی.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Mode 2 Button / Card */}
+                  <div 
+                    onClick={() => setSettingsSubTab('direct_display')}
+                    className={`p-4 rounded-2xl border transition-all cursor-pointer flex items-start gap-3.5 relative overflow-hidden ${
+                      settingsSubTab === 'direct_display'
+                        ? 'bg-indigo-600/30 border-indigo-400 text-white ring-2 ring-indigo-400/50 shadow-lg'
+                        : 'bg-white/5 border-white/10 hover:bg-white/10 text-slate-300'
+                    }`}
+                  >
+                    <div className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 text-lg ${
+                      settingsSubTab === 'direct_display' ? 'bg-indigo-500 text-white shadow-md' : 'bg-slate-800 text-indigo-400'
+                    }`}>
+                      <i className="fas fa-tv"></i>
+                    </div>
+                    <div className="space-y-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-black text-sm text-white">حالت ۲: نمایشگر وب و پخش ابری</span>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/30 text-emerald-300 border border-emerald-400/30">
+                          بدون نیاز به OBS
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-300 leading-relaxed">
+                        نمایش مستقیم اسامی روی مانیتور/تلویزیون سالن (/display) و پخش زنده اینترنتی از طریق سرور ابری.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Sub-tabs Navigation Bar */}
               <div className="bg-white dark:bg-slate-900 p-2 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
                 <div className="flex items-center gap-2 overflow-x-auto no-scrollbar p-1">
                   {[
-                    { id: 'general', label: 'عمومی', icon: 'fa-sliders-h' },
-                    { id: 'images', label: 'تصاویر', icon: 'fa-image' },
-                    { id: 'sms', label: 'پیامک', icon: 'fa-sms' },
-                    { id: 'stream', label: 'پخش زنده', icon: 'fa-satellite-dish' },
+                    { id: 'obs_mode', label: 'حالت ۱: خروجی فایل‌های متنی (OBS)', icon: 'fa-file-code', badge: 'تولید txt' },
+                    { id: 'direct_display', label: 'حالت ۲: نمایشگر مستقیم وب و پخش ابری', icon: 'fa-tv', badge: 'بدون OBS' },
+                    { id: 'sms', label: 'تنظیمات پیامک', icon: 'fa-sms' },
                     ...(currentUser.role === 'superadmin' ? [
-                      { id: 'admins', label: 'مدیران', icon: 'fa-user-shield' },
+                      { id: 'admins', label: 'مدیریت مدیران', icon: 'fa-user-shield' },
                     ] : []),
                   ].map(tab => (
                     <button
@@ -1684,33 +1754,183 @@ export const AdminPanel: React.FC<{
                     >
                       <i className={`fas ${tab.icon} text-sm`}></i>
                       <span>{tab.label}</span>
+                      {tab.badge && (
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                          settingsSubTab === tab.id ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'
+                        }`}>
+                          {tab.badge}
+                        </span>
+                      )}
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* Sub-tab 1: General (عمومی) */}
-              {settingsSubTab === 'general' && (
-                <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-6">
-                  <div>
-                    <h3 className="font-black text-slate-800 dark:text-slate-100 text-base flex items-center gap-2 mb-1">
-                      <i className="fas fa-sliders-h text-blue-500"></i> تنظیمات عمومی، قلم‌ها، سطوح و متون نمایشگر
-                    </h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                      عنوان مراسم، سرعت و قلم‌ها، مرزبندی مبالغ و سطوح، تنظیمات خروجی OBS و متون نمایشگر
-                    </p>
+              {/* Sub-tab 1: OBS Mode (حالت ۱) */}
+              {settingsSubTab === 'obs_mode' && (
+                <div className="space-y-6">
+                  {/* Mode 1 Description Banner */}
+                  <div className="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white p-6 rounded-3xl shadow-lg border border-blue-800/50 space-y-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-blue-500/20 text-blue-400 rounded-2xl flex items-center justify-center text-2xl border border-blue-400/30">
+                        <i className="fas fa-file-code"></i>
+                      </div>
+                      <div>
+                        <h3 className="font-black text-lg text-white flex items-center gap-2">
+                          <span>تنظیمات حالت ۱: ساخت فایل‌های متنی برای نرم‌افزار OBS</span>
+                          <span className="text-xs bg-blue-500/30 text-blue-300 border border-blue-400/30 px-2.5 py-0.5 rounded-full font-bold">
+                            OBS File Mode
+                          </span>
+                        </h3>
+                        <p className="text-xs text-slate-300 mt-1 leading-relaxed">
+                          در این حالت، سامانه اسامی اهداکنندگان را به‌صورت سه فایل متنی (.txt) در پوشه‌ای روی کامپیوتر شما ذخیره می‌کند تا نرم‌افزار OBS آن‌ها را بخواند و روی تصویر پخش زنده قرار دهد.
+                        </p>
+                      </div>
+                    </div>
                   </div>
 
-                  {/* Section 1: Event Title & Display Labels */}
-                  <div className="space-y-4">
-                    <h4 className="text-xs font-black text-slate-700 dark:text-slate-300 flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-2">
-                      <i className="fas fa-heading text-blue-500"></i> عنوان مراسم و برچسب‌های نمایشگر
+                  {/* Section 1: Directory Connection */}
+                  <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+                    <div className="flex items-center justify-between flex-wrap gap-4 border-b border-slate-100 dark:border-slate-800 pb-4">
+                      <div>
+                        <h4 className="font-black text-slate-800 dark:text-slate-100 text-sm flex items-center gap-2">
+                          <i className="fas fa-folder-open text-blue-500"></i> انتخاب و اتصال پوشه ذخیره‌سازی روی کامپیوتر
+                        </h4>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                          پوشه‌ای را انتخاب کنید تا فایل‌های متنی اسامی به‌صورت خودکار و لحظه‌ای در آن به‌روزرسانی شوند.
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className={`text-xs font-bold px-3 py-1.5 rounded-xl border flex items-center gap-1.5 ${
+                          directoryHandle 
+                            ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800' 
+                            : 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800'
+                        }`}>
+                          <i className={`fas fa-circle text-[8px] ${directoryHandle ? 'text-emerald-500 animate-pulse' : 'text-amber-500'}`}></i>
+                          <span>{directoryHandle ? 'پوشه متصل است (به‌روزرسانی خودکار)' : 'پوشه انتخاب نشده است'}</span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={selectDirectory}
+                          className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-black px-4 py-2.5 rounded-xl transition-all shadow-md shadow-blue-500/20 flex items-center gap-2 cursor-pointer"
+                        >
+                          <i className="fas fa-folder-plus"></i>
+                          <span>{directoryHandle ? 'تغییر پوشه ذخیره OBS' : 'انتخاب پوشه ذخیره (OBS)'}</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700/60 text-xs text-slate-600 dark:text-slate-300 leading-relaxed space-y-2">
+                      <div className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                        <i className="fas fa-info-circle text-blue-500"></i> راهنمای استفاده در نرم‌افزار OBS:
+                      </div>
+                      <ul className="list-disc list-inside space-y-1 text-slate-500 dark:text-slate-400 pr-2">
+                        <li>در نرم‌افزار OBS، سه منبع متنی (Text / GDI+) ایجاد کنید.</li>
+                        <li>گزینه <strong>«Read from file»</strong> را فعال کرده و فایل‌های متنی مربوطه را از پوشه انتخابی انتخاب نمایید.</li>
+                        <li>به‌محض ثبت هر پرداخت در سامانه، محتوای فایل‌ها به‌صورت خودکار آپدیت می‌شود.</li>
+                      </ul>
+                    </div>
+                  </div>
+
+                  {/* Section 2: OBS File Names & Format Settings */}
+                  <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-5">
+                    <h4 className="text-sm font-black text-slate-800 dark:text-slate-100 flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
+                      <i className="fas fa-sliders-h text-indigo-500"></i> نام فایل‌ها، ظرفیت خطوط و الگوی متنی OBS
+                    </h4>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <label className="text-xs font-bold text-slate-600 dark:text-slate-400 block mb-1">نام فایل خط پایین (عمومی)</label>
+                        <input className="w-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 dark:text-white rounded-xl p-2.5 text-left font-mono text-sm" dir="ltr" value={settings.obsFileLow || 'خط پايين.txt'} onChange={e=>handleUpdateSettings({obsFileLow: e.target.value})} />
+                      </div>
+                      <div>
+                        <label className="text-xs font-bold text-slate-600 dark:text-slate-400 block mb-1">نام فایل خط وسط (متوسط)</label>
+                        <input className="w-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 dark:text-white rounded-xl p-2.5 text-left font-mono text-sm" dir="ltr" value={settings.obsFileMid || 'خط وسط.txt'} onChange={e=>handleUpdateSettings({obsFileMid: e.target.value})} />
+                      </div>
+                      <div>
+                        <label className="text-xs font-bold text-slate-600 dark:text-slate-400 block mb-1">نام فایل خط بالا (ویژه)</label>
+                        <input className="w-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 dark:text-white rounded-xl p-2.5 text-left font-mono text-sm" dir="ltr" value={settings.obsFileHigh || 'خط بالا.txt'} onChange={e=>handleUpdateSettings({obsFileHigh: e.target.value})} />
+                      </div>
+
+                      <div>
+                        <label className="text-xs font-bold text-slate-600 dark:text-slate-400 block mb-1">ظرفیت خط پایین (تعداد نفرات)</label>
+                        <input type="number" className="w-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 dark:text-white rounded-xl p-2.5 text-center font-bold" value={settings.obsCapLow || 16} onChange={e=>handleUpdateSettings({obsCapLow: parseInt(e.target.value)})} />
+                      </div>
+                      <div>
+                        <label className="text-xs font-bold text-slate-600 dark:text-slate-400 block mb-1">ظرفیت خط وسط (تعداد نفرات)</label>
+                        <input type="number" className="w-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 dark:text-white rounded-xl p-2.5 text-center font-bold" value={settings.obsCapMid || 20} onChange={e=>handleUpdateSettings({obsCapMid: parseInt(e.target.value)})} />
+                      </div>
+                      <div>
+                        <label className="text-xs font-bold text-slate-600 dark:text-slate-400 block mb-1">ظرفیت خط بالا (تعداد نفرات)</label>
+                        <input type="number" className="w-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 dark:text-white rounded-xl p-2.5 text-center font-bold" value={settings.obsCapHigh || 10} onChange={e=>handleUpdateSettings({obsCapHigh: parseInt(e.target.value)})} />
+                      </div>
+
+                      <div className="md:col-span-3">
+                        <label className="text-xs font-bold text-slate-600 dark:text-slate-400 block mb-1">کاراکتر جداکننده بین اسامی در خروجی متنی</label>
+                        <input className="w-32 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 dark:text-white rounded-xl p-2.5 text-center font-bold" value={settings.obsSeparator || '-'} onChange={e=>handleUpdateSettings({obsSeparator: e.target.value})} />
+                      </div>
+
+                      <div className="md:col-span-3">
+                        <label className="text-xs font-bold text-slate-600 dark:text-slate-400 block mb-1">فرمت متنی هر آیتم در فایل‌های OBS</label>
+                        <span className="text-[10px] text-slate-400 block mb-2">متغیرها: {'{donorName}'} (نام خیّر)، {'{fatherName}'} (نام پدر)، {'{separator}'} (جداکننده). مثال: {'{donorName}({fatherName}){separator}'}</span>
+                        <input dir="ltr" className="w-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 dark:text-white rounded-xl p-2.5 text-left font-mono text-sm" placeholder="{donorName}({fatherName}){separator}" value={settings.obsFormat ?? '{donorName}({fatherName}){separator}'} onChange={e=>handleUpdateSettings({obsFormat: e.target.value})} />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Section 3: OBS Amount Thresholds */}
+                  <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+                    <h4 className="text-sm font-black text-slate-800 dark:text-slate-100 flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
+                      <i className="fas fa-layer-group text-amber-500"></i> مرزبندی مبالغ تفکیک اسامی در فایل‌های OBS
+                    </h4>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="p-4 bg-blue-50/70 dark:bg-blue-950/30 rounded-xl border border-blue-200 dark:border-blue-800/60 space-y-1">
+                        <label className="text-xs font-bold text-blue-800 dark:text-blue-300 block">مرز مبلغ خط متوسط برای فایل متنی (تومان)</label>
+                        <CurrencyInput className="w-full border-none bg-transparent font-black text-blue-900 dark:text-blue-200 text-lg outline-none" value={settings.obsThresholdMid ?? 60000} onChange={val=>handleUpdateSettings({obsThresholdMid: parseInt(val)})} />
+                      </div>
+                      <div className="p-4 bg-yellow-50/70 dark:bg-yellow-950/30 rounded-xl border border-yellow-200 dark:border-yellow-800/60 space-y-1">
+                        <label className="text-xs font-bold text-yellow-800 dark:text-yellow-300 block">مرز مبلغ خط بالا برای فایل متنی (تومان)</label>
+                        <CurrencyInput className="w-full border-none bg-transparent font-black text-yellow-900 dark:text-yellow-200 text-lg outline-none" value={settings.obsThresholdHigh ?? 150000} onChange={val=>handleUpdateSettings({obsThresholdHigh: parseInt(val)})} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Sub-tab 2: Direct Display & Cloud Streamer (حالت ۲) */}
+              {settingsSubTab === 'direct_display' && (
+                <div className="space-y-6">
+                  {/* Mode 2 Description Banner */}
+                  <div className="bg-gradient-to-r from-emerald-900 via-teal-900 to-slate-900 text-white p-6 rounded-3xl shadow-lg border border-emerald-800/50 space-y-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-emerald-500/20 text-emerald-400 rounded-2xl flex items-center justify-center text-2xl border border-emerald-400/30">
+                        <i className="fas fa-tv"></i>
+                      </div>
+                      <div>
+                        <h3 className="font-black text-lg text-white flex items-center gap-2">
+                          <span>تنظیمات حالت ۲: نمایشگر مستقیم وب (/display) و استریم ابری</span>
+                          <span className="text-xs bg-emerald-500/30 text-emerald-300 border border-emerald-400/30 px-2.5 py-0.5 rounded-full font-bold">
+                            Direct Web Display Mode
+                          </span>
+                        </h3>
+                        <p className="text-xs text-slate-300 mt-1 leading-relaxed">
+                          در این حالت نیازی به نرم‌افزار OBS روی کامپیوتر نیست! سامانه مستقیماً اسامی را روی مانیتور سالن نمایش می‌دهد و سرور ابری می‌تواند صفحه مانیتور را به‌صورت زنده و اینترنتی پخش کند.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Section 1: Event Titles & Labels */}
+                  <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+                    <h4 className="text-sm font-black text-slate-800 dark:text-slate-100 flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
+                      <i className="fas fa-heading text-emerald-500"></i> عنوان مراسم، برچسب‌ها و متون مانیتور سالن
                     </h4>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="md:col-span-2">
-                        <label className="text-xs font-bold text-slate-600 dark:text-slate-400 block mb-1">عنوان اصلی مراسم</label>
-                        <input className="w-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 dark:text-white rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none" value={settings.eventTitle} onChange={e=>handleUpdateSettings({eventTitle: e.target.value})} placeholder="مثال: یادبود مرحوم حاج علی حسینی" />
+                        <label className="text-xs font-bold text-slate-600 dark:text-slate-400 block mb-1">عنوان اصلی مراسم روی مانیتور</label>
+                        <input className="w-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 dark:text-white rounded-xl p-3 text-sm focus:ring-2 focus:ring-emerald-500 outline-none" value={settings.eventTitle} onChange={e=>handleUpdateSettings({eventTitle: e.target.value})} placeholder="مثال: یادبود مرحوم حاج علی حسینی" />
                       </div>
 
                       <div className="flex gap-4 items-center bg-slate-50 dark:bg-slate-800/60 p-4 rounded-xl border border-slate-200 dark:border-slate-700/60">
@@ -1734,7 +1954,7 @@ export const AdminPanel: React.FC<{
                       </div>
 
                       <div className="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-xl border border-slate-200 dark:border-slate-700/60 space-y-3 md:col-span-2">
-                        <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">متن فوتر (مثال: شادی روح درگذشتگان صلوات)</label>
+                        <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">متن فوتر مانیتور (مثال: شادی روح درگذشتگان صلوات)</label>
                         <input className="w-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 dark:text-white rounded-lg p-2.5 text-sm" value={settings.footerText} onChange={e=>handleUpdateSettings({footerText: e.target.value})} />
                         <div className="flex gap-4 pt-1">
                           <div className="flex items-center gap-2"><span className="text-xs font-bold text-slate-500">رنگ:</span><input type="color" className="w-7 h-7 rounded border-0 cursor-pointer" value={settings.footerColor || '#ffffff'} onChange={e=>handleUpdateSettings({footerColor: e.target.value})} /></div>
@@ -1744,10 +1964,50 @@ export const AdminPanel: React.FC<{
                     </div>
                   </div>
 
-                  {/* Section 2: Fonts & Typography (Integrated from 'fonts') */}
-                  <div className="space-y-4 pt-4 border-t border-slate-100 dark:border-slate-800">
-                    <h4 className="text-xs font-black text-slate-700 dark:text-slate-300 flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-2">
-                      <i className="fas fa-font text-blue-500"></i> مدیریت قلم‌ها و فونت‌ها
+                  {/* Section 2: Images Management */}
+                  <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+                    <h4 className="text-sm font-black text-slate-800 dark:text-slate-100 flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
+                      <i className="fas fa-image text-emerald-500"></i> تصاویر، عکس مرحوم و پس‌زمینه مانیتور سالن
+                    </h4>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      <div className="space-y-2">
+                        <label className="text-xs font-bold text-slate-600 dark:text-slate-400">عکس مرحوم</label>
+                        <div className="h-44 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-2xl flex flex-col items-center justify-center relative overflow-hidden group cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 transition-all bg-white dark:bg-slate-900">
+                          {settings.deceasedImage ? <img src={settings.deceasedImage} className="w-full h-full object-cover" /> : <div className="text-center p-4"><i className="fas fa-camera text-slate-300 dark:text-slate-600 text-3xl mb-2 block"></i><span className="text-xs text-slate-400">برای آپلود کلیک کنید</span></div>}
+                          <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={e=>e.target.files && handleFileUpload(e.target.files[0], 'deceasedImage')} />
+                          {settings.deceasedImage && <button onClick={()=>handleUpdateSettings({deceasedImage: ''})} className="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-all shadow-md"><i className="fas fa-times text-xs"></i></button>}
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-xs font-bold text-slate-600 dark:text-slate-400">تصویر پس‌زمینه سالن</label>
+                        <div className="h-44 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-2xl flex flex-col items-center justify-center relative overflow-hidden group cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 transition-all bg-white dark:bg-slate-900">
+                          {settings.bgImage ? <img src={settings.bgImage} className="w-full h-full object-cover" /> : <div className="text-center p-4"><i className="fas fa-image text-slate-300 dark:text-slate-600 text-3xl mb-2 block"></i><span className="text-xs text-slate-400">برای آپلود کلیک کنید</span></div>}
+                          <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={e=>e.target.files && handleFileUpload(e.target.files[0], 'bgImage')} />
+                          {settings.bgImage && <button onClick={()=>handleUpdateSettings({bgImage: ''})} className="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-all shadow-md"><i className="fas fa-times text-xs"></i></button>}
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-xs font-bold text-slate-600 dark:text-slate-400">تصویر اطلاعیه (Full Screen)</label>
+                        <div className="h-44 border-2 border-dashed border-orange-300 dark:border-orange-800 rounded-2xl flex flex-col items-center justify-center relative overflow-hidden group cursor-pointer hover:bg-orange-50/50 dark:hover:bg-orange-950/20 transition-all bg-white dark:bg-slate-900">
+                          {settings.announcementImage ? <img src={settings.announcementImage} className="w-full h-full object-cover" /> : <div className="text-center p-4"><i className="fas fa-scroll text-orange-300 dark:text-orange-700 text-3xl mb-2 block"></i><span className="text-xs text-orange-400">برای آپلود کلیک کنید</span></div>}
+                          <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={e=>e.target.files && handleFileUpload(e.target.files[0], 'announcementImage')} />
+                          {settings.announcementImage && <button onClick={()=>handleUpdateSettings({announcementImage: ''})} className="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-all shadow-md"><i className="fas fa-times text-xs"></i></button>}
+                          <div className="absolute bottom-2 right-2 bg-white/90 dark:bg-slate-900/90 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 flex items-center gap-1.5">
+                            <input type="checkbox" checked={settings.showAnnouncement} onChange={(e)=>{e.stopPropagation(); handleUpdateSettings({showAnnouncement: e.target.checked})}} className="w-4 h-4 accent-orange-600 cursor-pointer" id="show-announcement-chk" />
+                            <label htmlFor="show-announcement-chk" className="text-[10px] font-bold text-slate-700 dark:text-slate-300 cursor-pointer">نمایش در سالن</label>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Section 3: Fonts & Speed Settings */}
+                  <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-5">
+                    <h4 className="text-sm font-black text-slate-800 dark:text-slate-100 flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
+                      <i className="fas fa-font text-blue-500"></i> مدیریت قلم‌ها، اندازه فونت و سرعت حرکت افقی خطوط روی مانیتور
                     </h4>
 
                     <div className="space-y-4">
@@ -1762,238 +2022,121 @@ export const AdminPanel: React.FC<{
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700/60">
                           <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-2">فونت سطح بالا (High)</label>
-                          <select className="w-full text-xs font-bold border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 dark:text-white rounded-xl p-3" value={settings.fontHigh} onChange={e=>handleUpdateSettings({fontHigh: e.target.value})}>{fonts.map(f=><option key={f}>{f}</option>)}</select>
+                          <select className="w-full text-xs font-bold border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 dark:text-white rounded-xl p-3" value={settings.fontHigh} onChange={e=>handleUpdateSettings({fontHigh: e.target.value})}>{['IranSans', 'Vazirmatn', 'B Yekan', 'B Nazanin', 'CustomFont'].map(f=><option key={f}>{f}</option>)}</select>
                         </div>
                         <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700/60">
                           <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-2">فونت سطح متوسط (Mid)</label>
-                          <select className="w-full text-xs font-bold border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 dark:text-white rounded-xl p-3" value={settings.fontMid} onChange={e=>handleUpdateSettings({fontMid: e.target.value})}>{fonts.map(f=><option key={f}>{f}</option>)}</select>
+                          <select className="w-full text-xs font-bold border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 dark:text-white rounded-xl p-3" value={settings.fontMid} onChange={e=>handleUpdateSettings({fontMid: e.target.value})}>{['IranSans', 'Vazirmatn', 'B Yekan', 'B Nazanin', 'CustomFont'].map(f=><option key={f}>{f}</option>)}</select>
                         </div>
                         <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700/60">
                           <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-2">فونت سطح پایین (Low)</label>
-                          <select className="w-full text-xs font-bold border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 dark:text-white rounded-xl p-3" value={settings.fontLow} onChange={e=>handleUpdateSettings({fontLow: e.target.value})}>{fonts.map(f=><option key={f}>{f}</option>)}</select>
+                          <select className="w-full text-xs font-bold border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 dark:text-white rounded-xl p-3" value={settings.fontLow} onChange={e=>handleUpdateSettings({fontLow: e.target.value})}>{['IranSans', 'Vazirmatn', 'B Yekan', 'B Nazanin', 'CustomFont'].map(f=><option key={f}>{f}</option>)}</select>
+                        </div>
+                      </div>
+
+                      {/* Font size & Speed Sliders */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+                        {/* High Line */}
+                        <div className="p-3.5 bg-yellow-500/10 dark:bg-yellow-900/20 rounded-xl border border-yellow-500/30 space-y-3">
+                          <span className="text-xs font-bold text-yellow-700 dark:text-yellow-400 block border-b border-yellow-500/20 pb-1 flex items-center justify-between">
+                            <span>⭐ خط بالا (سطح ویژه)</span>
+                          </span>
+                          <div>
+                            <div className="flex justify-between text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">
+                              <span>اندازه فونت:</span>
+                              <span className="font-mono text-yellow-600 dark:text-yellow-400">{settings.fontSizeHigh ?? 64}px</span>
+                            </div>
+                            <input type="range" min="20" max="120" className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer" value={settings.fontSizeHigh ?? 64} onChange={e=>handleUpdateSettings({fontSizeHigh: parseInt(e.target.value)})} />
+                          </div>
+                          <div>
+                            <div className="flex justify-between text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">
+                              <span>سرعت حرکت:</span>
+                              <span className="font-mono text-yellow-600 dark:text-yellow-400">{settings.speedHigh ?? 14}</span>
+                            </div>
+                            <input type="range" min="5" max="100" style={{direction: 'ltr'}} className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer" value={settings.speedHigh ?? 14} onChange={e=>handleUpdateSettings({speedHigh: parseInt(e.target.value)})} />
+                          </div>
+                        </div>
+
+                        {/* Mid Line */}
+                        <div className="p-3.5 bg-blue-500/10 dark:bg-blue-900/20 rounded-xl border border-blue-500/30 space-y-3">
+                          <span className="text-xs font-bold text-blue-700 dark:text-blue-400 block border-b border-blue-500/20 pb-1 flex items-center justify-between">
+                            <span>🔹 خط وسط (سطح متوسط)</span>
+                          </span>
+                          <div>
+                            <div className="flex justify-between text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">
+                              <span>اندازه فونت:</span>
+                              <span className="font-mono text-blue-600 dark:text-blue-400">{settings.fontSizeMid ?? 48}px</span>
+                            </div>
+                            <input type="range" min="20" max="120" className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer" value={settings.fontSizeMid ?? 48} onChange={e=>handleUpdateSettings({fontSizeMid: parseInt(e.target.value)})} />
+                          </div>
+                          <div>
+                            <div className="flex justify-between text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">
+                              <span>سرعت حرکت:</span>
+                              <span className="font-mono text-blue-600 dark:text-blue-400">{settings.speedMid ?? 20}</span>
+                            </div>
+                            <input type="range" min="5" max="100" style={{direction: 'ltr'}} className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer" value={settings.speedMid ?? 20} onChange={e=>handleUpdateSettings({speedMid: parseInt(e.target.value)})} />
+                          </div>
+                        </div>
+
+                        {/* Low Line */}
+                        <div className="p-3.5 bg-slate-500/10 dark:bg-slate-800/40 rounded-xl border border-slate-300 dark:border-slate-700 space-y-3">
+                          <span className="text-xs font-bold text-slate-700 dark:text-slate-300 block border-b border-slate-300 dark:border-slate-700 pb-1 flex items-center justify-between">
+                            <span>🔸 خط پایین (سطح عمومی)</span>
+                          </span>
+                          <div>
+                            <div className="flex justify-between text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">
+                              <span>اندازه فونت:</span>
+                              <span className="font-mono text-slate-700 dark:text-slate-300">{settings.fontSizeLow ?? 36}px</span>
+                            </div>
+                            <input type="range" min="20" max="120" className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer" value={settings.fontSizeLow ?? 36} onChange={e=>handleUpdateSettings({fontSizeLow: parseInt(e.target.value)})} />
+                          </div>
+                          <div>
+                            <div className="flex justify-between text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">
+                              <span>سرعت حرکت:</span>
+                              <span className="font-mono text-slate-700 dark:text-slate-300">{settings.speedLow ?? 24}</span>
+                            </div>
+                            <input type="range" min="5" max="100" style={{direction: 'ltr'}} className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer" value={settings.speedLow ?? 24} onChange={e=>handleUpdateSettings({speedLow: parseInt(e.target.value)})} />
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  {/* Section 3: Amount Thresholds & OBS Settings (Integrated from 'thresholds_obs') */}
-                  <div className="space-y-4 pt-4 border-t border-slate-100 dark:border-slate-800">
-                    <h4 className="text-xs font-black text-slate-700 dark:text-slate-300 flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-2">
-                      <i className="fas fa-layer-group text-amber-500"></i> مرزبندی مبالغ، سطوح و تنظیمات خروجی OBS
+                  {/* Section 4: Display Amount Thresholds */}
+                  <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+                    <h4 className="text-sm font-black text-slate-800 dark:text-slate-100 flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
+                      <i className="fas fa-layer-group text-emerald-500"></i> مرزبندی مبالغ نمایشگر سالن
                     </h4>
 
-                    {/* Thresholds for Display */}
-                    <div className="space-y-3">
-                      <span className="text-xs font-bold text-slate-600 dark:text-slate-400 block">مرزبندی مبالغ نمایشگر سالن:</span>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="p-4 bg-emerald-50/70 dark:bg-emerald-950/30 rounded-xl border border-emerald-200 dark:border-emerald-800/60 space-y-1">
-                          <label className="text-xs font-bold text-emerald-800 dark:text-emerald-300 block">مرز سطح ویژه (High)</label>
-                          <CurrencyInput className="w-full border-none bg-transparent font-black text-emerald-900 dark:text-emerald-200 text-lg outline-none" value={settings.highThreshold} onChange={val=>handleUpdateSettings({highThreshold: parseInt(val)})} />
-                        </div>
-                        <div className="p-4 bg-blue-50/70 dark:bg-blue-950/30 rounded-xl border border-blue-200 dark:border-blue-800/60 space-y-1">
-                          <label className="text-xs font-bold text-blue-800 dark:text-blue-300 block">مرز سطح متوسط (Mid)</label>
-                          <CurrencyInput className="w-full border-none bg-transparent font-black text-blue-900 dark:text-blue-200 text-lg outline-none" value={settings.midThreshold} onChange={val=>handleUpdateSettings({midThreshold: parseInt(val)})} />
-                        </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="p-4 bg-emerald-50/70 dark:bg-emerald-950/30 rounded-xl border border-emerald-200 dark:border-emerald-800/60 space-y-1">
+                        <label className="text-xs font-bold text-emerald-800 dark:text-emerald-300 block">مرز سطح ویژه (High) برای مانیتور سالن</label>
+                        <CurrencyInput className="w-full border-none bg-transparent font-black text-emerald-900 dark:text-emerald-200 text-lg outline-none" value={settings.highThreshold} onChange={val=>handleUpdateSettings({highThreshold: parseInt(val)})} />
                       </div>
-                    </div>
-
-                    {/* OBS Text Files Configuration */}
-                    <div className="space-y-4 pt-3 border-t border-slate-100 dark:border-slate-800">
-                      <span className="text-xs font-bold text-slate-600 dark:text-slate-400 block">تنظیمات خروجی فایل‌های متنی OBS:</span>
-
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                          <label className="text-xs font-bold text-slate-600 dark:text-slate-400 block mb-1">نام فایل خط پایین</label>
-                          <input className="w-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 dark:text-white rounded-lg p-2.5 text-left font-mono text-sm" dir="ltr" value={settings.obsFileLow || 'خط پايين.txt'} onChange={e=>handleUpdateSettings({obsFileLow: e.target.value})} />
-                        </div>
-                        <div>
-                          <label className="text-xs font-bold text-slate-600 dark:text-slate-400 block mb-1">نام فایل خط وسط</label>
-                          <input className="w-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 dark:text-white rounded-lg p-2.5 text-left font-mono text-sm" dir="ltr" value={settings.obsFileMid || 'خط وسط.txt'} onChange={e=>handleUpdateSettings({obsFileMid: e.target.value})} />
-                        </div>
-                        <div>
-                          <label className="text-xs font-bold text-slate-600 dark:text-slate-400 block mb-1">نام فایل خط بالا</label>
-                          <input className="w-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 dark:text-white rounded-lg p-2.5 text-left font-mono text-sm" dir="ltr" value={settings.obsFileHigh || 'خط بالا.txt'} onChange={e=>handleUpdateSettings({obsFileHigh: e.target.value})} />
-                        </div>
-                        <div>
-                          <label className="text-xs font-bold text-slate-600 dark:text-slate-400 block mb-1">ظرفیت خط پایین (نفر)</label>
-                          <input type="number" className="w-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 dark:text-white rounded-lg p-2.5 text-center font-bold" value={settings.obsCapLow || 16} onChange={e=>handleUpdateSettings({obsCapLow: parseInt(e.target.value)})} />
-                        </div>
-                        <div>
-                          <label className="text-xs font-bold text-slate-600 dark:text-slate-400 block mb-1">ظرفیت خط وسط (نفر)</label>
-                          <input type="number" className="w-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 dark:text-white rounded-lg p-2.5 text-center font-bold" value={settings.obsCapMid || 20} onChange={e=>handleUpdateSettings({obsCapMid: parseInt(e.target.value)})} />
-                        </div>
-                        <div>
-                          <label className="text-xs font-bold text-slate-600 dark:text-slate-400 block mb-1">ظرفیت خط بالا (نفر)</label>
-                          <input type="number" className="w-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 dark:text-white rounded-lg p-2.5 text-center font-bold" value={settings.obsCapHigh || 10} onChange={e=>handleUpdateSettings({obsCapHigh: parseInt(e.target.value)})} />
-                        </div>
-                        <div className="md:col-span-3">
-                          <label className="text-xs font-bold text-slate-600 dark:text-slate-400 block mb-1">کاراکتر جداکننده بین اسامی در خروجی متنی</label>
-                          <input className="w-32 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 dark:text-white rounded-lg p-2.5 text-center font-bold" value={settings.obsSeparator || '-'} onChange={e=>handleUpdateSettings({obsSeparator: e.target.value})} />
-                        </div>
-                        <div className="md:col-span-3">
-                          <label className="text-xs font-bold text-slate-600 dark:text-slate-400 block mb-1">فرمت متنی هر آیتم</label>
-                          <span className="text-[10px] text-slate-400 block mb-2">متغیرها: {'{donorName}'} (نام خیّر)، {'{fatherName}'} (نام پدر)، {'{separator}'} (جداکننده). مثال: {'{donorName}({fatherName}){separator}'}</span>
-                          <input dir="ltr" className="w-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 dark:text-white rounded-lg p-2.5 text-left font-mono text-sm" placeholder="{donorName}({fatherName}){separator}" value={settings.obsFormat ?? '{donorName}({fatherName}){separator}'} onChange={e=>handleUpdateSettings({obsFormat: e.target.value})} />
-                        </div>
-                        <div>
-                          <label className="text-xs font-bold text-slate-600 dark:text-slate-400 block mb-1">مرز مبلغ خط متوسط برای فایل</label>
-                          <CurrencyInput className="w-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 dark:text-white rounded-lg p-2.5 text-center font-bold" value={settings.obsThresholdMid ?? 60000} onChange={val=>handleUpdateSettings({obsThresholdMid: parseInt(val)})} />
-                        </div>
-                        <div>
-                          <label className="text-xs font-bold text-slate-600 dark:text-slate-400 block mb-1">مرز مبلغ خط بالا برای فایل</label>
-                          <CurrencyInput className="w-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 dark:text-white rounded-lg p-2.5 text-center font-bold" value={settings.obsThresholdHigh ?? 150000} onChange={val=>handleUpdateSettings({obsThresholdHigh: parseInt(val)})} />
-                        </div>
+                      <div className="p-4 bg-blue-50/70 dark:bg-blue-950/30 rounded-xl border border-blue-200 dark:border-blue-800/60 space-y-1">
+                        <label className="text-xs font-bold text-blue-800 dark:text-blue-300 block">مرز سطح متوسط (Mid) برای مانیتور سالن</label>
+                        <CurrencyInput className="w-full border-none bg-transparent font-black text-blue-900 dark:text-blue-200 text-lg outline-none" value={settings.midThreshold} onChange={val=>handleUpdateSettings({midThreshold: parseInt(val)})} />
                       </div>
                     </div>
                   </div>
 
-                  {/* Section 4: Line Speeds & Font Sizes */}
-                  <div className="space-y-4 pt-4 border-t border-slate-100 dark:border-slate-800">
-                    <h4 className="text-xs font-black text-slate-700 dark:text-slate-300 flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-2">
-                      <i className="fas fa-text-height text-blue-500"></i> تنظیمات سرعت و اندازه فونت برای هر خط
-                    </h4>
-
-                    <div className="bg-slate-50 dark:bg-slate-800/60 p-4 md:p-5 rounded-2xl border border-slate-200 dark:border-slate-700/60 space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          {/* خط بالا - سطح ویژه */}
-                          <div className="p-3.5 bg-yellow-500/10 dark:bg-yellow-900/20 rounded-xl border border-yellow-500/30 space-y-3">
-                            <span className="text-xs font-bold text-yellow-700 dark:text-yellow-400 block border-b border-yellow-500/20 pb-1 flex items-center justify-between">
-                              <span>⭐ خط بالا (سطح ویژه)</span>
-                            </span>
-                            <div>
-                              <div className="flex justify-between text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">
-                                <span>اندازه فونت:</span>
-                                <span className="font-mono text-yellow-600 dark:text-yellow-400">{settings.fontSizeHigh ?? 64}px</span>
-                              </div>
-                              <input 
-                                type="range" min="20" max="120" 
-                                className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer" 
-                                value={settings.fontSizeHigh ?? 64} 
-                                onChange={e=>handleUpdateSettings({fontSizeHigh: parseInt(e.target.value)})} 
-                              />
-                            </div>
-                            <div>
-                              <div className="flex justify-between text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">
-                                <span>سرعت حرکت:</span>
-                                <span className="font-mono text-yellow-600 dark:text-yellow-400">{settings.speedHigh ?? 14}</span>
-                              </div>
-                              <input 
-                                type="range" min="5" max="100" style={{direction: 'ltr'}} 
-                                className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer" 
-                                value={settings.speedHigh ?? 14} 
-                                onChange={e=>handleUpdateSettings({speedHigh: parseInt(e.target.value)})} 
-                              />
-                            </div>
-                          </div>
-
-                          {/* خط وسط - سطح متوسط */}
-                          <div className="p-3.5 bg-blue-500/10 dark:bg-blue-900/20 rounded-xl border border-blue-500/30 space-y-3">
-                            <span className="text-xs font-bold text-blue-700 dark:text-blue-400 block border-b border-blue-500/20 pb-1 flex items-center justify-between">
-                              <span>🔹 خط وسط (سطح متوسط)</span>
-                            </span>
-                            <div>
-                              <div className="flex justify-between text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">
-                                <span>اندازه فونت:</span>
-                                <span className="font-mono text-blue-600 dark:text-blue-400">{settings.fontSizeMid ?? 48}px</span>
-                              </div>
-                              <input 
-                                type="range" min="20" max="120" 
-                                className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer" 
-                                value={settings.fontSizeMid ?? 48} 
-                                onChange={e=>handleUpdateSettings({fontSizeMid: parseInt(e.target.value)})} 
-                              />
-                            </div>
-                            <div>
-                              <div className="flex justify-between text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">
-                                <span>سرعت حرکت:</span>
-                                <span className="font-mono text-blue-600 dark:text-blue-400">{settings.speedMid ?? 20}</span>
-                              </div>
-                              <input 
-                                type="range" min="5" max="100" style={{direction: 'ltr'}} 
-                                className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer" 
-                                value={settings.speedMid ?? 20} 
-                                onChange={e=>handleUpdateSettings({speedMid: parseInt(e.target.value)})} 
-                              />
-                            </div>
-                          </div>
-
-                          {/* خط پایین - سطح عمومی */}
-                          <div className="p-3.5 bg-slate-500/10 dark:bg-slate-800/40 rounded-xl border border-slate-300 dark:border-slate-700 space-y-3">
-                            <span className="text-xs font-bold text-slate-700 dark:text-slate-300 block border-b border-slate-300 dark:border-slate-700 pb-1 flex items-center justify-between">
-                              <span>🔸 خط پایین (سطح عمومی)</span>
-                            </span>
-                            <div>
-                              <div className="flex justify-between text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">
-                                <span>اندازه فونت:</span>
-                                <span className="font-mono text-slate-700 dark:text-slate-300">{settings.fontSizeLow ?? 36}px</span>
-                              </div>
-                              <input 
-                                type="range" min="20" max="120" 
-                                className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer" 
-                                value={settings.fontSizeLow ?? 36} 
-                                onChange={e=>handleUpdateSettings({fontSizeLow: parseInt(e.target.value)})} 
-                              />
-                            </div>
-                            <div>
-                              <div className="flex justify-between text-xs font-bold text-slate-600 dark:text-slate-400 mb-1">
-                                <span>سرعت حرکت:</span>
-                                <span className="font-mono text-slate-700 dark:text-slate-300">{settings.speedLow ?? 24}</span>
-                              </div>
-                              <input 
-                                type="range" min="5" max="100" style={{direction: 'ltr'}} 
-                                className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer" 
-                                value={settings.speedLow ?? 24} 
-                                onChange={e=>handleUpdateSettings({speedLow: parseInt(e.target.value)})} 
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      </div>
+                  {/* Section 5: Cloud Live Streamer Control Center */}
+                  <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-5">
+                    <div>
+                      <h3 className="font-black text-slate-800 dark:text-slate-100 text-base flex items-center gap-2 mb-1">
+                        <i className="fas fa-satellite-dish text-indigo-500"></i> {currentUser.role === 'superadmin' ? 'مرکز کنترل پخش زنده و استریم اینترنتی (M3U8 Streamer)' : 'مرکز کنترل و پخش زنده'}
+                      </h3>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        {currentUser.role === 'superadmin' 
+                          ? 'اجرای مستقیم ورکفلو گیت‌هاب، ضبط خودکار صفحه، تبدیل به HLS و پروکسی بدون فیلتر کلودفلر' 
+                          : 'شروع و پایان پخش زنده، دریافت لینک و پیش‌نمایش تصویر'}
+                      </p>
                     </div>
-                  </div>
-                )}
-
-              {/* Sub-tab 2: Images (تصاویر) */}
-              {settingsSubTab === 'images' && (
-                <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-6">
-                  <div>
-                    <h3 className="font-black text-slate-800 dark:text-slate-100 text-base flex items-center gap-2 mb-1">
-                      <i className="fas fa-image text-emerald-500"></i> تصاویر و پس‌زمینه سالن
-                    </h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">عکس مرحوم، تصویر زمینه نمایشگر سالن و تصویر اطلاعیه تمام‌صفحه</p>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="space-y-2">
-                      <label className="text-xs font-bold text-slate-600 dark:text-slate-400">عکس مرحوم</label>
-                      <div className="h-44 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-2xl flex flex-col items-center justify-center relative overflow-hidden group cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 transition-all bg-white dark:bg-slate-900">
-                        {settings.deceasedImage ? <img src={settings.deceasedImage} className="w-full h-full object-cover" /> : <div className="text-center p-4"><i className="fas fa-camera text-slate-300 dark:text-slate-600 text-3xl mb-2 block"></i><span className="text-xs text-slate-400">برای آپلود کلیک کنید</span></div>}
-                        <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={e=>e.target.files && handleFileUpload(e.target.files[0], 'deceasedImage')} />
-                        {settings.deceasedImage && <button onClick={()=>handleUpdateSettings({deceasedImage: ''})} className="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-all shadow-md"><i className="fas fa-times text-xs"></i></button>}
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <label className="text-xs font-bold text-slate-600 dark:text-slate-400">تصویر پس‌زمینه</label>
-                      <div className="h-44 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-2xl flex flex-col items-center justify-center relative overflow-hidden group cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 transition-all bg-white dark:bg-slate-900">
-                        {settings.bgImage ? <img src={settings.bgImage} className="w-full h-full object-cover" /> : <div className="text-center p-4"><i className="fas fa-image text-slate-300 dark:text-slate-600 text-3xl mb-2 block"></i><span className="text-xs text-slate-400">برای آپلود کلیک کنید</span></div>}
-                        <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={e=>e.target.files && handleFileUpload(e.target.files[0], 'bgImage')} />
-                        {settings.bgImage && <button onClick={()=>handleUpdateSettings({bgImage: ''})} className="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-all shadow-md"><i className="fas fa-times text-xs"></i></button>}
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <label className="text-xs font-bold text-slate-600 dark:text-slate-400">تصویر اطلاعیه (Full Screen)</label>
-                      <div className="h-44 border-2 border-dashed border-orange-300 dark:border-orange-800 rounded-2xl flex flex-col items-center justify-center relative overflow-hidden group cursor-pointer hover:bg-orange-50/50 dark:hover:bg-orange-950/20 transition-all bg-white dark:bg-slate-900">
-                        {settings.announcementImage ? <img src={settings.announcementImage} className="w-full h-full object-cover" /> : <div className="text-center p-4"><i className="fas fa-scroll text-orange-300 dark:text-orange-700 text-3xl mb-2 block"></i><span className="text-xs text-orange-400">برای آپلود کلیک کنید</span></div>}
-                        <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={e=>e.target.files && handleFileUpload(e.target.files[0], 'announcementImage')} />
-                        {settings.announcementImage && <button onClick={()=>handleUpdateSettings({announcementImage: ''})} className="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-all shadow-md"><i className="fas fa-times text-xs"></i></button>}
-                        <div className="absolute bottom-2 right-2 bg-white/90 dark:bg-slate-900/90 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 flex items-center gap-1.5">
-                          <input type="checkbox" checked={settings.showAnnouncement} onChange={(e)=>{e.stopPropagation(); handleUpdateSettings({showAnnouncement: e.target.checked})}} className="w-4 h-4 accent-orange-600 cursor-pointer" id="show-announcement-chk" />
-                          <label htmlFor="show-announcement-chk" className="text-[10px] font-bold text-slate-700 dark:text-slate-300 cursor-pointer">نمایش در سالن</label>
-                        </div>
-                      </div>
-                    </div>
+                    <LiveStreamSection
+                      settings={settings}
+                      onUpdateSettings={handleUpdateSettings}
+                      isSuperAdmin={currentUser.role === 'superadmin'}
+                    />
                   </div>
                 </div>
               )}
