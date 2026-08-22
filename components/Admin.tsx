@@ -50,7 +50,7 @@ export const DEFAULT_SETTINGS: DisplaySettings = {
   githubToken: '',
   githubRepo: 'hudsonparker87/kheyriyeh2',
   githubWorkflow: 'streamer.yml',
-  streamTargetUrl: 'https://kheyriyeh2.hudsonparker87.workers.dev/display',
+  streamTargetUrl: '',
   streamWorkerUrl: '',
   streamNeonUrl: 'https://br-lucky-wave-axbfuzrm.storage.c-4.us-east-2.aws.neon.tech/m3u8-streamer/live.m3u8',
   streamQuality: '720p',

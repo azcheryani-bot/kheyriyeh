@@ -18,8 +18,13 @@ import shutil
 import boto3
 from botocore.client import Config
 
-# آدرس صفحه‌ای که می‌خواهید استریم شود (پیش‌فرض یا از متغیر محیطی)
-TARGET_URL = os.getenv("TARGET_URL", "https://kheyriyeh2.hudsonparker87.workers.dev/display")
+# آدرس صفحه‌ای که می‌خواهید استریم شود (خوانده‌شده از متغیر محیطی یا آرگومان ارسالی)
+TARGET_URL = (
+    os.getenv("TARGET_URL") or 
+    os.getenv("STREAM_TARGET_URL") or 
+    os.getenv("DISPLAY_URL") or 
+    "https://kheyriyeh2.hudsonparker87.workers.dev/display"
+).strip()
 
 # مشخصات اتصال به باکت استوریج نئون (امکان override با Environment Variables)
 S3_ENDPOINT = os.getenv("S3_ENDPOINT_URL", "https://br-lucky-wave-axbfuzrm.storage.c-4.us-east-2.aws.neon.tech").strip()

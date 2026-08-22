@@ -37,15 +37,15 @@ export const LiveStreamSection: React.FC<LiveStreamSectionProps> = ({
   const githubToken = settings.githubToken || '';
   const githubRepo = settings.githubRepo || 'hudsonparker87-cmd/kheyriyeh2';
   const githubWorkflow = settings.githubWorkflow || 'streamer.yml';
-  const currentHostOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://kheyriyeh2.hudsonparker87.workers.dev';
-  const workerUrl = settings.streamWorkerUrl || `${currentHostOrigin}/live.m3u8`;
+  const currentHostOrigin = typeof window !== 'undefined' ? window.location.origin : '';
+  const workerUrl = settings.streamWorkerUrl || (currentHostOrigin ? `${currentHostOrigin}/live.m3u8` : '');
   const neonUrl = settings.streamNeonUrl || 'https://br-lucky-wave-axbfuzrm.storage.c-4.us-east-2.aws.neon.tech/m3u8-streamer/live.m3u8';
-  const targetDisplayUrl = settings.streamTargetUrl || `${currentHostOrigin}/display`;
+  const targetDisplayUrl = settings.streamTargetUrl || (currentHostOrigin ? `${currentHostOrigin}/display` : '');
 
   // Effective playback URL: prioritize Cloudflare worker proxy, fallback to direct neon S3
   const activeStreamUrl = workerUrl.trim() 
     ? (workerUrl.endsWith('.m3u8') ? workerUrl : `${workerUrl.replace(/\/$/, '')}/live.m3u8`) 
-    : `${currentHostOrigin}/live.m3u8`;
+    : (currentHostOrigin ? `${currentHostOrigin}/live.m3u8` : '');
 
   const fetchStatus = async (silent = false) => {
     if (!githubToken || !githubRepo) return;
@@ -132,7 +132,9 @@ export const LiveStreamSection: React.FC<LiveStreamSectionProps> = ({
           workflow: githubWorkflow,
           quality,
           fps,
-          duration
+          duration,
+          url: targetDisplayUrl,
+          target_url: targetDisplayUrl
         })
       });
 
@@ -737,8 +739,8 @@ export const LiveStreamSection: React.FC<LiveStreamSectionProps> = ({
               <input
                 type="url"
                 dir="ltr"
-                placeholder="https://.../display"
-                value={settings.streamTargetUrl || 'https://kheyriyeh2.hudsonparker87.workers.dev/display'}
+                placeholder={currentHostOrigin ? `${currentHostOrigin}/display` : 'https://your-domain.com/display'}
+                value={settings.streamTargetUrl || (currentHostOrigin ? `${currentHostOrigin}/display` : '')}
                 onChange={e => onUpdateSettings({ streamTargetUrl: e.target.value })}
                 className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-3 text-xs font-mono text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500"
               />

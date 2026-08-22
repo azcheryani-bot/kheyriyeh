@@ -46,6 +46,9 @@ interface DispatchPayload {
   fps?: string | number;
   duration?: string | number;
   callback_url?: string;
+  url?: string;
+  target_url?: string;
+  streamTargetUrl?: string;
 }
 
 // 1. Dispatch GitHub Actions Workflow
@@ -59,7 +62,10 @@ streamRouter.post('/dispatch', async (req, res) => {
       quality = '720p',
       fps = '30',
       duration = '60',
-      callback_url
+      callback_url,
+      url,
+      target_url,
+      streamTargetUrl
     } = req.body as DispatchPayload;
 
     if (!token || !token.trim()) {
@@ -78,6 +84,16 @@ streamRouter.post('/dispatch', async (req, res) => {
 
     let cleanRepo = repo.trim().replace(/^https?:\/\/github\.com\//, '').replace(/\.git$/, '').replace(/\/$/, '');
     const cleanWorkflow = workflow.trim() || 'streamer.yml';
+
+    // Resolve target URL from body, environment variables, or fallback
+    const resolvedTargetUrl = (
+      target_url ||
+      url ||
+      streamTargetUrl ||
+      process.env.TARGET_URL ||
+      process.env.STREAM_TARGET_URL ||
+      ''
+    ).trim();
 
     // Helper to send dispatch request
     const tryDispatch = async (targetRepo: string, targetWorkflow: string, targetRef: string) => {
@@ -113,6 +129,9 @@ streamRouter.post('/dispatch', async (req, res) => {
         inputs.quality = String(quality);
         inputs.fps = String(fps);
         inputs.duration = String(duration);
+        if (resolvedTargetUrl) {
+          inputs.url = resolvedTargetUrl;
+        }
       }
       
       return fetch(dispatchUrl, {
