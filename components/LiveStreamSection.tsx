@@ -444,18 +444,6 @@ export const LiveStreamSection: React.FC<LiveStreamSectionProps> = ({
             </div>
           </div>
 
-          {/* Banner for LG webOS Compatibility Standard */}
-          <div className="p-3.5 bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/60 rounded-2xl flex items-start gap-3 text-xs">
-            <i className="fas fa-tv text-indigo-600 dark:text-indigo-400 text-base mt-0.5 flex-shrink-0"></i>
-            <div className="space-y-1 text-slate-700 dark:text-slate-300">
-              <div className="font-black text-indigo-900 dark:text-indigo-200">
-                پخش تضمین‌شده روی تلویزیون‌های LG webOS (استاندارد طلایی):
-              </div>
-              <p className="leading-relaxed text-[11px]">
-                انلود با کدک <code className="font-mono bg-white dark:bg-slate-800 px-1 py-0.5 rounded text-indigo-600 dark:text-indigo-300">H.264 Main Profile L4.0</code>، فریم ریت ۳۰، کلیدفریم دقیق هر ۲ ثانیه (<code className="font-mono">keyint=60</code>)، صدای <code className="font-mono">AAC-LC 128k</code> دوکاناله و چانک‌های استاندارد <code className="font-mono">MPEG-TS (4s)</code> جهت جلوگیری کامل از هرگونه لگ، سیاهی یا عدم پشتیبانی.
-              </p>
-            </div>
-          </div>
 
           {/* Workflow Status Details - Super Admin Only */}
           {isSuperAdmin && (
