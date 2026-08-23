@@ -53,7 +53,6 @@ export const DEFAULT_SETTINGS: DisplaySettings = {
   githubWorkflow: 'streamer.yml',
   streamTargetUrl: '',
   streamWorkerUrl: '',
-  streamNeonUrl: '',
   streamQuality: '720p',
   streamFps: 30,
   streamDuration: 60,

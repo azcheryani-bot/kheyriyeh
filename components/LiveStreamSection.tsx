@@ -40,7 +40,6 @@ export const LiveStreamSection: React.FC<LiveStreamSectionProps> = ({
   const githubWorkflow = settings.githubWorkflow || 'streamer.yml';
   const currentHostOrigin = typeof window !== 'undefined' ? window.location.origin : '';
   const workerUrl = settings.streamWorkerUrl || (currentHostOrigin ? `${currentHostOrigin}/live.m3u8` : '');
-  const neonUrl = settings.streamNeonUrl || '';
   const targetDisplayUrl = settings.streamTargetUrl || '';
 
   // Effective playback URL: prioritize Cloudflare worker proxy, fallback to direct neon S3
@@ -581,28 +580,6 @@ export const LiveStreamSection: React.FC<LiveStreamSectionProps> = ({
                   >
                     <i className={`fas ${copiedLink === 'worker' ? 'fa-check text-green-400' : 'fa-copy'}`}></i>
                     <span>{copiedLink === 'worker' ? 'کپی شد' : 'کپی'}</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* SuperAdmin Link 2: Direct Neon S3 Storage Link */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block">
-                  لینک مستقیم باکت استوریج نئون (Neon S3 Endpoint)
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    readOnly
-                    dir="ltr"
-                    value={neonUrl}
-                    className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 text-xs font-mono text-slate-700 dark:text-slate-300 select-all"
-                  />
-                  <button
-                    onClick={() => copyToClipboard(neonUrl, 'neon')}
-                    className="px-3.5 py-2 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 text-slate-800 dark:text-slate-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer flex-shrink-0"
-                  >
-                    <i className={`fas ${copiedLink === 'neon' ? 'fa-check text-green-500' : 'fa-copy'}`}></i>
-                    <span>{copiedLink === 'neon' ? 'کپی شد' : 'کپی'}</span>
                   </button>
                 </div>
               </div>
