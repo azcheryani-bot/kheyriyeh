@@ -448,9 +448,7 @@ export const AdminPanel: React.FC<{
   };
 
   useEffect(() => {
-    loadEvents();
     loadSettings();
-    if (currentUser.role === 'superadmin') loadAdmins();
   }, []);
 
   useEffect(() => {
@@ -460,16 +458,23 @@ export const AdminPanel: React.FC<{
   }, [donations, directoryHandle, settings]);
 
   useEffect(() => {
-    // Initial fetch
-    loadDonations(selectedEventId);
-    loadEvents();
-    if (currentUser.role === 'superadmin') loadAdmins();
+    const fetchInitialData = async () => {
+      await loadEvents();
+      await loadDonations(selectedEventId);
+      if (currentUser.role === 'superadmin') {
+        await loadAdmins();
+      }
+    };
+    
+    fetchInitialData();
 
     // Real-time SSE Subscription (now using Socket.io)
-    const unsubscribe = dbApi.subscribe(() => {
-      loadDonations(selectedEventId);
-      loadEvents();
-      if (currentUser.role === 'superadmin') loadAdmins();
+    const unsubscribe = dbApi.subscribe(async () => {
+      await loadEvents();
+      await loadDonations(selectedEventId);
+      if (currentUser.role === 'superadmin') {
+        await loadAdmins();
+      }
     });
 
     return () => {
