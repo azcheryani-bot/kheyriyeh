@@ -29,7 +29,26 @@ export async function startXrayProxy(): Promise<void> {
       }
 
       console.log('Starting Xray-core...');
-      const xrayProcess = spawn(XRAY_BIN, ['run', '-c', path.join(process.cwd(), 'xray-config.json')], {
+      // Load base config and inject environment variables if present
+      const configPath = path.join(process.cwd(), 'xray-config.json');
+      const runtimeConfigPath = path.join(BIN_DIR, 'runtime-xray.json');
+      if (fs.existsSync(configPath)) {
+        try {
+          const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+          if (config.outbounds && config.outbounds[0] && config.outbounds[0].settings && config.outbounds[0].settings.vnext && config.outbounds[0].settings.vnext[0]) {
+            const vnext = config.outbounds[0].settings.vnext[0];
+            if (process.env.XRAY_ADDRESS) vnext.address = process.env.XRAY_ADDRESS;
+            if (process.env.XRAY_PORT) vnext.port = Number(process.env.XRAY_PORT);
+            if (process.env.XRAY_ID && vnext.users && vnext.users[0]) vnext.users[0].id = process.env.XRAY_ID;
+          }
+          fs.writeFileSync(runtimeConfigPath, JSON.stringify(config, null, 2));
+        } catch (e) {
+          console.error('Error overriding Xray config:', e);
+        }
+      }
+
+      const activeConfigPath = fs.existsSync(runtimeConfigPath) ? runtimeConfigPath : configPath;
+      const xrayProcess = spawn(XRAY_BIN, ['run', '-c', activeConfigPath], {
         stdio: 'pipe',
       });
 

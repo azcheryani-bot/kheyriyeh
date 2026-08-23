@@ -22,11 +22,11 @@
       "settings": {
         "vnext": [
           {
-            "address": "129.146.143.80",
+            "address": "YOUR_XRAY_ADDRESS",
             "port": 48111,
             "users": [
               {
-                "id": "d4603cc2-e0ee-4651-83f5-1db5b7168177",
+                "id": "YOUR_XRAY_ID",
                 "alterId": 0,
                 "security": "auto"
               }

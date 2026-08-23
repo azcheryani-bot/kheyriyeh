@@ -37,8 +37,16 @@ interface SessionData {
 const activeSessions = new Map<string, SessionData>();
 const revokedTokens = new Set<string>();
 
+let dynamicSessionSecret: string | null = null;
+
 function getSessionSecret(): string {
-  return 'ekram_app_secret_session_key_2026_v1';
+  if (process.env.SESSION_SECRET) {
+    return process.env.SESSION_SECRET;
+  }
+  if (!dynamicSessionSecret) {
+    dynamicSessionSecret = crypto.randomBytes(32).toString('hex');
+  }
+  return dynamicSessionSecret;
 }
 
 function signToken(payload: SessionData): string {

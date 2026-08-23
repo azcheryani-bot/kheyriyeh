@@ -21,10 +21,10 @@ from botocore.client import Config
 # آدرس صفحه‌ای که می‌خواهید استریم شود (تنها آدرس معتبر ارسالی از پنل سوپر ادمین)
 TARGET_URL = (os.getenv("TARGET_URL") or "").strip()
 
-# مشخصات اتصال به باکت استوریج نئون (امکان override با Environment Variables)
-S3_ENDPOINT = os.getenv("S3_ENDPOINT_URL", "https://br-lucky-wave-axbfuzrm.storage.c-4.us-east-2.aws.neon.tech").strip()
-S3_ACCESS_KEY = os.getenv("AWS_ACCESS_KEY_ID", "nak_live_1bfd6791115643c59cee64e82e36e1cd").strip()
-S3_SECRET_KEY = os.getenv("AWS_SECRET_ACCESS_KEY", "nsk_live_a15238f9642107cd7482831f8d003dfbf6d2bdcae52bb44b099eb321a74c60a7").strip()
+# مشخصات اتصال به باکت استوریج نئون (تنها از طریق Environment Variables خوانده می‌شود)
+S3_ENDPOINT = os.getenv("S3_ENDPOINT_URL", "").strip()
+S3_ACCESS_KEY = os.getenv("AWS_ACCESS_KEY_ID", "").strip()
+S3_SECRET_KEY = os.getenv("AWS_SECRET_ACCESS_KEY", "").strip()
 S3_REGION = os.getenv("AWS_DEFAULT_REGION", "us-east-2").strip()
 BUCKET_NAME = os.getenv("S3_BUCKET_NAME", "m3u8-streamer").strip()
 

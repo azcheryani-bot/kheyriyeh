@@ -9,7 +9,7 @@ export default {
 
     // 1. Embedded Anti-Sanction Stream Proxy (HLS Live Stream & TS Video Segments)
     if (path === '/live.m3u8' || path.endsWith('.ts') || path.startsWith('/live/')) {
-      const origin = env.NEON_STREAM_ORIGIN || DEFAULT_NEON_STREAM_ORIGIN;
+      const origin = env.S3_ENDPOINT_URL || DEFAULT_NEON_STREAM_ORIGIN;
       const targetUrl = path.startsWith('/live/') 
         ? `${origin}${path.replace(/^\/live/, '')}` 
         : `${origin}${path}`;
