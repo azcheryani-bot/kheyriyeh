@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { DisplaySettings } from '../types';
 import { Spinner } from './Shared';
+import { HlsPlayer } from './HlsPlayer';
 
 interface LiveStreamSectionProps {
   settings: DisplaySettings;
@@ -644,16 +645,10 @@ export const LiveStreamSection: React.FC<LiveStreamSectionProps> = ({
 
             {showPlayer && (
               <div className="mt-3 p-3 bg-black rounded-2xl overflow-hidden shadow-inner">
-                <video
-                  ref={videoRef}
-                  src={activeStreamUrl}
-                  controls
-                  autoPlay
-                  playsInline
+                <HlsPlayer
+                  streamUrl={activeStreamUrl}
                   className="w-full max-h-64 rounded-xl object-contain bg-black"
-                >
-                  مرورگر شما از پخش ویدیو زنده پشتیبانی نمی‌کند.
-                </video>
+                />
                 <div className="flex items-center justify-between text-[11px] text-slate-400 mt-2 px-1">
                   <span>{isSuperAdmin ? `منبع در حال پخش: ${workerUrl ? 'پروکسی کلودفلر' : 'استوریج نئون'}` : 'پیش‌نمایش زنده'}</span>
                   <a href={activeStreamUrl} target="_blank" rel="noreferrer" className="text-indigo-400 hover:underline">
