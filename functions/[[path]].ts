@@ -1,6 +1,6 @@
 import { handleCloudflareRequest } from '../cf-adapter';
 
-const DEFAULT_NEON_STREAM_ORIGIN = 'https://br-lucky-wave-axbfuzrm.storage.c-4.us-east-2.aws.neon.tech/m3u8-streamer';
+const DEFAULT_NEON_STREAM_ORIGIN = '';
 
 export async function onRequest(context: { request: Request; env: Record<string, any>; next: () => Promise<Response> }): Promise<Response> {
   const url = new URL(context.request.url);
@@ -9,7 +9,13 @@ export async function onRequest(context: { request: Request; env: Record<string,
   // 1. Live Stream Proxy
   if (path === '/live.m3u8' || path.endsWith('.ts') || path.startsWith('/live/')) {
     let origin = context.env.S3_ENDPOINT_URL || DEFAULT_NEON_STREAM_ORIGIN;
-    if (context.env.S3_ENDPOINT_URL && context.env.S3_BUCKET_NAME && !origin.endsWith(context.env.S3_BUCKET_NAME)) {
+    if (!origin) {
+      return new Response('Stream Proxy Error: S3_ENDPOINT_URL is not configured', { status: 500 });
+    }
+    if (!context.env.S3_BUCKET_NAME) {
+      return new Response('Stream Proxy Error: S3_BUCKET_NAME is not configured', { status: 500 });
+    }
+    if (!origin.endsWith(context.env.S3_BUCKET_NAME)) {
       origin = `${origin.replace(/\/$/, '')}/${context.env.S3_BUCKET_NAME}`;
     }
     const targetUrl = path.startsWith('/live/') 

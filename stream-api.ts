@@ -569,14 +569,18 @@ streamRouter.post('/test-hls', async (req, res) => {
 });
 
 // 5. Embedded Anti-Sanction Stream Proxy (HLS M3U8 & TS Segments)
-const DEFAULT_NEON_STREAM_ORIGIN = 'https://br-lucky-wave-axbfuzrm.storage.c-4.us-east-2.aws.neon.tech/m3u8-streamer';
+const DEFAULT_NEON_STREAM_ORIGIN = '';
 
 export async function proxyStreamRequest(reqPath: string, req: express.Request, res: express.Response) {
   let origin = process.env.S3_ENDPOINT_URL || DEFAULT_NEON_STREAM_ORIGIN;
-  if (process.env.S3_ENDPOINT_URL && process.env.S3_BUCKET_NAME) {
-    if (!origin.endsWith(process.env.S3_BUCKET_NAME)) {
-      origin = `${origin.replace(/\/$/, '')}/${process.env.S3_BUCKET_NAME}`;
-    }
+  if (!origin) {
+    return res.status(500).send('Stream Proxy Error: S3_ENDPOINT_URL is not configured');
+  }
+  if (!process.env.S3_BUCKET_NAME) {
+    return res.status(500).send('Stream Proxy Error: S3_BUCKET_NAME is not configured');
+  }
+  if (!origin.endsWith(process.env.S3_BUCKET_NAME)) {
+    origin = `${origin.replace(/\/$/, '')}/${process.env.S3_BUCKET_NAME}`;
   }
   const cleanPath = reqPath.startsWith('/') ? reqPath : `/${reqPath}`;
   const targetUrl = `${origin}${cleanPath}`;

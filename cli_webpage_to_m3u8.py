@@ -26,7 +26,7 @@ S3_ENDPOINT = os.getenv("S3_ENDPOINT_URL", "").strip()
 S3_ACCESS_KEY = os.getenv("AWS_ACCESS_KEY_ID", "").strip()
 S3_SECRET_KEY = os.getenv("AWS_SECRET_ACCESS_KEY", "").strip()
 S3_REGION = os.getenv("AWS_DEFAULT_REGION", "us-east-2").strip()
-BUCKET_NAME = os.getenv("S3_BUCKET_NAME", "m3u8-streamer").strip()
+BUCKET_NAME = os.getenv("S3_BUCKET_NAME", "").strip()
 
 s3_client = boto3.client(
     's3',

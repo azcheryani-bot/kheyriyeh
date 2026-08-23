@@ -53,7 +53,7 @@ export const DEFAULT_SETTINGS: DisplaySettings = {
   githubWorkflow: 'streamer.yml',
   streamTargetUrl: '',
   streamWorkerUrl: '',
-  streamNeonUrl: 'https://br-lucky-wave-axbfuzrm.storage.c-4.us-east-2.aws.neon.tech/m3u8-streamer/live.m3u8',
+  streamNeonUrl: '',
   streamQuality: '720p',
   streamFps: 30,
   streamDuration: 60,
@@ -525,17 +525,11 @@ export const AdminPanel: React.FC<{
   const loadSettings = async () => {
     try {
       const data = await dbApi.config.get('displaySettings');
-      const origin = typeof window !== 'undefined' ? window.location.origin : '';
-      const defaultTargetUrl = origin ? `${origin}/display` : '';
       if (data?.value && typeof data.value === 'object') {
         const merged = { ...DEFAULT_SETTINGS, ...data.value };
-        if (!merged.streamTargetUrl && defaultTargetUrl) {
-          merged.streamTargetUrl = defaultTargetUrl;
-        }
         setSettings(merged);
       } else {
         const initial = { ...DEFAULT_SETTINGS };
-        if (defaultTargetUrl) initial.streamTargetUrl = defaultTargetUrl;
         setSettings(initial);
         await dbApi.config.upsert('displaySettings', initial);
       }

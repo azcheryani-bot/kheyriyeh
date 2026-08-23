@@ -40,8 +40,8 @@ export const LiveStreamSection: React.FC<LiveStreamSectionProps> = ({
   const githubWorkflow = settings.githubWorkflow || 'streamer.yml';
   const currentHostOrigin = typeof window !== 'undefined' ? window.location.origin : '';
   const workerUrl = settings.streamWorkerUrl || (currentHostOrigin ? `${currentHostOrigin}/live.m3u8` : '');
-  const neonUrl = settings.streamNeonUrl || 'https://br-lucky-wave-axbfuzrm.storage.c-4.us-east-2.aws.neon.tech/m3u8-streamer/live.m3u8';
-  const targetDisplayUrl = settings.streamTargetUrl || (currentHostOrigin ? `${currentHostOrigin}/display` : '');
+  const neonUrl = settings.streamNeonUrl || '';
+  const targetDisplayUrl = settings.streamTargetUrl || '';
 
   // Effective playback URL: prioritize Cloudflare worker proxy, fallback to direct neon S3
   const activeStreamUrl = workerUrl.trim() 
@@ -733,7 +733,7 @@ export const LiveStreamSection: React.FC<LiveStreamSectionProps> = ({
                 type="url"
                 dir="ltr"
                 placeholder={currentHostOrigin ? `${currentHostOrigin}/display` : 'https://your-domain.com/display'}
-                value={settings.streamTargetUrl || (currentHostOrigin ? `${currentHostOrigin}/display` : '')}
+                value={settings.streamTargetUrl || ''}
                 onChange={e => onUpdateSettings({ streamTargetUrl: e.target.value })}
                 className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-3 text-xs font-mono text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500"
               />
