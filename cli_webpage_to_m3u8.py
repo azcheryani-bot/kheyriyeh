@@ -194,7 +194,7 @@ def main():
         '-ac', '2',
         '-f', 'hls',
         '-hls_time', '4',
-        '-hls_list_size', '5',
+        '-hls_list_size', '7',
         '-hls_segment_type', 'mpegts',
         '-hls_flags', 'delete_segments',
         'live.m3u8'

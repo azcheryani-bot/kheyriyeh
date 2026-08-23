@@ -88,7 +88,12 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
       if (HlsClass && HlsClass.isSupported()) {
         const hls = new HlsClass({
           enableWorker: true,
-          lowLatencyMode: true,
+          lowLatencyMode: false, // Turn off aggressive low latency so browser doesn't hit end-of-buffer
+          liveSyncDurationCount: 3, // Start 3 segments (~12 sec) behind live edge, providing a rock-solid buffer like VLC!
+          liveMaxLatencyDurationCount: 8, // Allow up to 8 segments drift
+          liveDurationInfinity: true,
+          maxBufferLength: 30, // Buffer up to 30 seconds ahead
+          maxMaxBufferLength: 60,
           manifestLoadingTimeOut: 10000,
           manifestLoadingMaxRetry: Infinity, // Keep retrying manifest load
           manifestLoadingRetryDelay: 2000,
@@ -131,6 +136,11 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
                 hlsRef.current = null;
                 checkAndReloadStream();
                 break;
+            }
+          } else {
+            // Non-fatal errors like BUFFER_STALLED_ERROR
+            if (data.details === HlsClass.ErrorDetails?.BUFFER_STALLED_ERROR) {
+              hls.startLoad();
             }
           }
         });
