@@ -572,7 +572,12 @@ streamRouter.post('/test-hls', async (req, res) => {
 const DEFAULT_NEON_STREAM_ORIGIN = 'https://br-lucky-wave-axbfuzrm.storage.c-4.us-east-2.aws.neon.tech/m3u8-streamer';
 
 export async function proxyStreamRequest(reqPath: string, req: express.Request, res: express.Response) {
-  const origin = process.env.S3_ENDPOINT_URL || DEFAULT_NEON_STREAM_ORIGIN;
+  let origin = process.env.S3_ENDPOINT_URL || DEFAULT_NEON_STREAM_ORIGIN;
+  if (process.env.S3_ENDPOINT_URL && process.env.S3_BUCKET_NAME) {
+    if (!origin.endsWith(process.env.S3_BUCKET_NAME)) {
+      origin = `${origin.replace(/\/$/, '')}/${process.env.S3_BUCKET_NAME}`;
+    }
+  }
   const cleanPath = reqPath.startsWith('/') ? reqPath : `/${reqPath}`;
   const targetUrl = `${origin}${cleanPath}`;
 

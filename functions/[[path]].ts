@@ -8,7 +8,10 @@ export async function onRequest(context: { request: Request; env: Record<string,
 
   // 1. Live Stream Proxy
   if (path === '/live.m3u8' || path.endsWith('.ts') || path.startsWith('/live/')) {
-    const origin = context.env.S3_ENDPOINT_URL || DEFAULT_NEON_STREAM_ORIGIN;
+    let origin = context.env.S3_ENDPOINT_URL || DEFAULT_NEON_STREAM_ORIGIN;
+    if (context.env.S3_ENDPOINT_URL && context.env.S3_BUCKET_NAME && !origin.endsWith(context.env.S3_BUCKET_NAME)) {
+      origin = `${origin.replace(/\/$/, '')}/${context.env.S3_BUCKET_NAME}`;
+    }
     const targetUrl = path.startsWith('/live/') 
       ? `${origin}${path.replace(/^\/live/, '')}` 
       : `${origin}${path}`;
