@@ -37,6 +37,7 @@ export const DEFAULT_SETTINGS: DisplaySettings = {
   smsPass: '',
   smsFrom: '',
   smsDefaultText: '',
+  enableTransactionSms: true,
   obsFileLow: 'خط پايين.txt',
   obsFileMid: 'خط وسط.txt',
   obsFileHigh: 'خط بالا.txt',
@@ -1083,6 +1084,7 @@ export const AdminPanel: React.FC<{
     setLoading(true);
     let data = null;
     let error = null;
+    const isSmsEnabled = settings?.enableTransactionSms !== false;
     try {
       data = await dbApi.donations.create({
         event_id: effectiveEventId,
@@ -1095,7 +1097,7 @@ export const AdminPanel: React.FC<{
         hideName: donationForm.hide,
         registeredBy: currentUser.displayName || currentUser.username,
         status: 'approved',
-        smsStatus: donationForm.mobile ? 'pending' : 'not_sent'
+        smsStatus: (isSmsEnabled && donationForm.mobile) ? 'pending' : 'not_sent'
       });
     } catch(e: any) { 
       error = e; 
@@ -1104,7 +1106,7 @@ export const AdminPanel: React.FC<{
     if (!error && data) {
         setDonationForm({ name: '', father: '', mobile: '', amount: '', desc: '', type: 'pos', hide: false });
         if (window.innerWidth < 768) setMobileMenuOpen(false);
-        if (data.mobile && data.mobile !== '-') {
+        if (isSmsEnabled && data.mobile && data.mobile !== '-') {
           await sendSms(data.mobile, settings?.smsDefaultText, data.id);
         }
         changeSelectedEvent(effectiveEventId);
@@ -1128,7 +1130,8 @@ export const AdminPanel: React.FC<{
       // Approval flow
       setActionIds(p => ({ ...p, [`status_${donation.id}`]: true }));
       await dbApi.donations.update(donation.id, { status: 'approved' });
-      if (donation.mobile && donation.mobile !== '-' && donation.smsStatus !== 'sent') {
+      const isSmsEnabled = settings?.enableTransactionSms !== false;
+      if (isSmsEnabled && donation.mobile && donation.mobile !== '-' && donation.smsStatus !== 'sent') {
         await sendSms(donation.mobile, settings?.smsDefaultText, donation.id);
       }
       await loadDonations(selectedEventId);
@@ -2147,9 +2150,54 @@ export const AdminPanel: React.FC<{
                     </h3>
                     <p className="text-xs text-slate-500 dark:text-slate-400">
                       {currentUser.role === 'superadmin' 
-                        ? 'نام کاربری، رمز عبور، خط فرستنده، استعلام اعتبار، ارسال گروهی و تست پیامک' 
-                        : 'مشاهده وضعیت سرور پیامک، روشن کردن سرور و ویرایش متن پیش‌فرض'}
+                        ? 'نام کاربری، رمز عبور، خط فرستنده، فعال/غیرفعال‌سازی ارسال پیامک تراکنش‌ها، استعلام اعتبار، ارسال گروهی و تست پیامک' 
+                        : 'فعال/غیرفعال‌سازی ارسال پیامک تراکنش‌ها، مشاهده وضعیت سرور پیامک، روشن کردن سرور و ویرایش متن پیش‌فرض'}
                     </p>
+                  </div>
+
+                  {/* Transaction SMS Toggle Control */}
+                  <div className={`p-4 rounded-2xl border transition-all flex flex-col md:flex-row md:items-center justify-between gap-4 ${
+                    settings.enableTransactionSms !== false 
+                      ? 'bg-emerald-50/70 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800/60' 
+                      : 'bg-amber-50/70 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800/60'
+                  }`}>
+                    <div className="flex items-center gap-3">
+                      <div className={`w-11 h-11 rounded-xl flex items-center justify-center text-xl font-bold flex-shrink-0 ${
+                        settings.enableTransactionSms !== false 
+                          ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/20' 
+                          : 'bg-amber-500 text-white shadow-md shadow-amber-500/20'
+                      }`}>
+                        <i className={`fas ${settings.enableTransactionSms !== false ? 'fa-comment-dots' : 'fa-comment-slash'}`}></i>
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-black text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                          <span>ارسال پیامک برای تراکنش‌ها</span>
+                          <span className={`text-[11px] font-bold px-2 py-0.5 rounded-md ${
+                            settings.enableTransactionSms !== false 
+                              ? 'bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300' 
+                              : 'bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300'
+                          }`}>
+                            {settings.enableTransactionSms !== false ? 'روشن (ارسال می‌شود)' : 'خاموش (ارسال نمی‌شود)'}
+                          </span>
+                        </h4>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                          در صورت روشن بودن، هنگام ثبت یا تایید تراکنش‌های جدید به شماره خیرین پیامک تشکر خودکار ارسال می‌گردد.
+                        </p>
+                      </div>
+                    </div>
+
+                    <label className="relative inline-flex items-center cursor-pointer flex-shrink-0 select-none">
+                      <input 
+                        type="checkbox" 
+                        className="sr-only peer" 
+                        checked={settings.enableTransactionSms !== false} 
+                        onChange={e => handleUpdateSettings({ enableTransactionSms: e.target.checked })} 
+                      />
+                      <div className="w-14 h-7 bg-slate-300 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all dark:after:border-slate-600 peer-checked:bg-emerald-600"></div>
+                      <span className="ms-3 text-xs font-bold text-slate-700 dark:text-slate-300">
+                        {settings.enableTransactionSms !== false ? 'روشن' : 'خاموش'}
+                      </span>
+                    </label>
                   </div>
 
                   <div className="space-y-4">

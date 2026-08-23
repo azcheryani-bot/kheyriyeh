@@ -86,6 +86,7 @@ export interface DisplaySettings {
   smsPass?: string;
   smsFrom?: string;
   smsDefaultText?: string;
+  enableTransactionSms?: boolean;
   // File Output Config
   obsDirHandle?: any; // Storing the handle might not work well in DB, but we'll try to just handle it locally
   obsFileLow?: string;
