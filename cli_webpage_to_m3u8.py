@@ -18,13 +18,8 @@ import shutil
 import boto3
 from botocore.client import Config
 
-# آدرس صفحه‌ای که می‌خواهید استریم شود (خوانده‌شده از متغیر محیطی یا آرگومان ارسالی)
-TARGET_URL = (
-    os.getenv("TARGET_URL") or 
-    os.getenv("STREAM_TARGET_URL") or 
-    os.getenv("DISPLAY_URL") or 
-    "https://kheyriyeh2.hudsonparker87.workers.dev/display"
-).strip()
+# آدرس صفحه‌ای که می‌خواهید استریم شود (تنها آدرس معتبر ارسالی از پنل سوپر ادمین)
+TARGET_URL = (os.getenv("TARGET_URL") or "").strip()
 
 # مشخصات اتصال به باکت استوریج نئون (امکان override با Environment Variables)
 S3_ENDPOINT = os.getenv("S3_ENDPOINT_URL", "https://br-lucky-wave-axbfuzrm.storage.c-4.us-east-2.aws.neon.tech").strip()
@@ -90,10 +85,13 @@ def main():
     parser.add_argument('--quality', default='720p', help="Stream quality resolution")
     parser.add_argument('--fps', default=30, type=int, help="Frames per second")
     parser.add_argument('--duration', default=60, type=int, help="Duration in minutes")
-    parser.add_argument('--url', default=TARGET_URL, help="Target URL to capture")
+    parser.add_argument('--url', default='', help="Target URL to capture")
     args = parser.parse_args()
 
-    target_web_url = args.url or TARGET_URL
+    target_web_url = (args.url or TARGET_URL).strip()
+    if not target_web_url:
+        print("❌ خطا: آدرس تارگت (URL) در پنل سوپر ادمین ثبت/ذخیره نشده است و آدرسی دریافت نگردید.")
+        sys.exit(1)
 
     qualities = {
         '240p': ('426x240', 426, 240, '500k'),

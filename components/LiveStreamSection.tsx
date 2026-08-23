@@ -40,7 +40,7 @@ export const LiveStreamSection: React.FC<LiveStreamSectionProps> = ({
   const currentHostOrigin = typeof window !== 'undefined' ? window.location.origin : '';
   const workerUrl = settings.streamWorkerUrl || (currentHostOrigin ? `${currentHostOrigin}/live.m3u8` : '');
   const neonUrl = settings.streamNeonUrl || 'https://br-lucky-wave-axbfuzrm.storage.c-4.us-east-2.aws.neon.tech/m3u8-streamer/live.m3u8';
-  const targetDisplayUrl = settings.streamTargetUrl || (currentHostOrigin ? `${currentHostOrigin}/display` : '');
+  const targetDisplayUrl = settings.streamTargetUrl || '';
 
   // Effective playback URL: prioritize Cloudflare worker proxy, fallback to direct neon S3
   const activeStreamUrl = workerUrl.trim() 
@@ -107,6 +107,15 @@ export const LiveStreamSection: React.FC<LiveStreamSectionProps> = ({
         message: isSuperAdmin
           ? 'لطفاً نام ریپازیتوری گیت‌هاب را وارد کنید (مثال: username/repo).'
           : 'تنظیمات سرور پخش زنده تکمیل نشده است. لطفاً با مدیر ارشد هماهنگ فرمایید.'
+      });
+      return;
+    }
+    if (!targetDisplayUrl.trim()) {
+      setFeedback({
+        type: 'error',
+        message: isSuperAdmin
+          ? 'لطفاً ابتدا «آدرس صفحه‌ای که باید استریم شود (Target Display URL)» را در پنل سوپر ادمین وارد و ذخیره کنید.'
+          : 'آدرس تارگت پخش زنده توسط مدیر ارشد در پنل ذخیره نشده است.'
       });
       return;
     }

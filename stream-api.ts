@@ -85,15 +85,25 @@ streamRouter.post('/dispatch', async (req, res) => {
     let cleanRepo = repo.trim().replace(/^https?:\/\/github\.com\//, '').replace(/\.git$/, '').replace(/\/$/, '');
     const cleanWorkflow = workflow.trim() || 'streamer.yml';
 
-    // Resolve target URL from body, environment variables, or fallback
+    // Retrieve target URL strictly from database config saved in super admin panel or payload, NEVER from env
+    const dbConfigResult = await db.select().from(dbConfig).where(eq(dbConfig.key, 'displaySettings')).limit(1);
+    const dbSettings = dbConfigResult.length > 0 ? (dbConfigResult[0].value as any) : {};
+    const dbTargetUrl = (dbSettings?.streamTargetUrl || '').trim();
+
     const resolvedTargetUrl = (
+      dbTargetUrl ||
       target_url ||
       url ||
       streamTargetUrl ||
-      process.env.TARGET_URL ||
-      process.env.STREAM_TARGET_URL ||
       ''
     ).trim();
+
+    if (cleanWorkflow !== 'sms-bridge.yml' && !resolvedTargetUrl) {
+      return res.status(400).json({
+        success: false,
+        error: 'آدرس تارگت (Target Display URL) در پنل سوپر ادمین ذخیره نشده است. لطفاً ابتدا آدرس را در تنظیمات سوپر ادمین وارد و ذخیره کنید.'
+      });
+    }
 
     // Helper to send dispatch request
     const tryDispatch = async (targetRepo: string, targetWorkflow: string, targetRef: string) => {
