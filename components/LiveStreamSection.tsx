@@ -41,7 +41,7 @@ export const LiveStreamSection: React.FC<LiveStreamSectionProps> = ({
   const currentHostOrigin = typeof window !== 'undefined' ? window.location.origin : '';
   const workerUrl = settings.streamWorkerUrl || (currentHostOrigin ? `${currentHostOrigin}/live.m3u8` : '');
   const neonUrl = settings.streamNeonUrl || 'https://br-lucky-wave-axbfuzrm.storage.c-4.us-east-2.aws.neon.tech/m3u8-streamer/live.m3u8';
-  const targetDisplayUrl = settings.streamTargetUrl || '';
+  const targetDisplayUrl = settings.streamTargetUrl || (currentHostOrigin ? `${currentHostOrigin}/display` : '');
 
   // Effective playback URL: prioritize Cloudflare worker proxy, fallback to direct neon S3
   const activeStreamUrl = workerUrl.trim() 
@@ -125,8 +125,9 @@ export const LiveStreamSection: React.FC<LiveStreamSectionProps> = ({
     setFeedback(null);
     setTestResult(null);
 
-    // Save selected params to settings
+    // Save selected params & target URL to settings
     onUpdateSettings({
+      streamTargetUrl: targetDisplayUrl,
       streamQuality: quality,
       streamFps: fps,
       streamDuration: duration

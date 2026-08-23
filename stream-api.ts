@@ -98,6 +98,19 @@ streamRouter.post('/dispatch', async (req, res) => {
       ''
     ).trim();
 
+    if (resolvedTargetUrl && (!dbSettings?.streamTargetUrl || dbSettings.streamTargetUrl !== resolvedTargetUrl)) {
+      try {
+        const updatedSettings = { ...dbSettings, streamTargetUrl: resolvedTargetUrl };
+        if (dbConfigResult.length > 0) {
+          await db.update(dbConfig).set({ value: updatedSettings }).where(eq(dbConfig.key, 'displaySettings'));
+        } else {
+          await db.insert(dbConfig).values({ key: 'displaySettings', value: updatedSettings });
+        }
+      } catch (err) {
+        console.error('Error auto-saving target URL to dbConfig:', err);
+      }
+    }
+
     if (cleanWorkflow !== 'sms-bridge.yml' && !resolvedTargetUrl) {
       return res.status(400).json({
         success: false,

@@ -520,10 +520,19 @@ export const AdminPanel: React.FC<{
   const loadSettings = async () => {
     try {
       const data = await dbApi.config.get('displaySettings');
+      const origin = typeof window !== 'undefined' ? window.location.origin : '';
+      const defaultTargetUrl = origin ? `${origin}/display` : '';
       if (data?.value && typeof data.value === 'object') {
-        setSettings(prev => ({ ...DEFAULT_SETTINGS, ...data.value }));
+        const merged = { ...DEFAULT_SETTINGS, ...data.value };
+        if (!merged.streamTargetUrl && defaultTargetUrl) {
+          merged.streamTargetUrl = defaultTargetUrl;
+        }
+        setSettings(merged);
       } else {
-        await dbApi.config.upsert('displaySettings', DEFAULT_SETTINGS);
+        const initial = { ...DEFAULT_SETTINGS };
+        if (defaultTargetUrl) initial.streamTargetUrl = defaultTargetUrl;
+        setSettings(initial);
+        await dbApi.config.upsert('displaySettings', initial);
       }
     } catch (err) {
       handleApiError(err);
