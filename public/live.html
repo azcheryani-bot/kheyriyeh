@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>پخش زنده مراسم - تلویزیون هوشمند</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js"></script>
+
+    <style>
+        * {
+            -webkit-box-sizing: border-box;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #020617;
+            color: #f8fafc;
+            font-family: 'Vazirmatn', Tahoma, Arial, sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        @-webkit-keyframes spin {
+            0% { -webkit-transform: rotate(0deg); transform: rotate(0deg); }
+            100% { -webkit-transform: rotate(360deg); transform: rotate(360deg); }
+        }
+
+        @keyframes spin {
+            0% { -webkit-transform: rotate(0deg); transform: rotate(0deg); }
+            100% { -webkit-transform: rotate(360deg); transform: rotate(360deg); }
+        }
+
+        .live-root {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+            background-color: #000000;
+            overflow: hidden;
+        }
+
+        .video-element {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            background-color: #000000;
+            display: block;
+        }
+
+        .top-controls {
+            position: absolute;
+            top: 14px;
+            left: 14px;
+            right: 14px;
+            z-index: 40;
+            display: -webkit-flex;
+            display: flex;
+            -webkit-align-items: center;
+            align-items: center;
+            -webkit-justify-content: space-between;
+            justify-content: space-between;
+            pointer-events: none;
+        }
+
+        .controls-group {
+            display: -webkit-flex;
+            display: flex;
+            -webkit-align-items: center;
+            align-items: center;
+            pointer-events: auto;
+        }
+
+        .tv-btn {
+            display: -webkit-inline-flex;
+            display: inline-flex;
+            -webkit-align-items: center;
+            align-items: center;
+            -webkit-justify-content: center;
+            justify-content: center;
+            height: 38px;
+            padding: 0 14px;
+            margin-left: 8px;
+            border-radius: 19px;
+            background-color: rgba(15, 23, 42, 0.72);
+            color: #e2e8f0;
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            font-family: 'Vazirmatn', Tahoma, sans-serif;
+            font-size: 13px;
+            font-weight: 700;
+            text-decoration: none;
+            cursor: pointer;
+            outline: none;
+        }
+
+        .tv-btn:hover,
+        .tv-btn:focus {
+            background-color: #2563eb;
+            color: #ffffff;
+            border-color: rgba(255, 255, 255, 0.45);
+        }
+
+        .tv-btn-warn {
+            background-color: rgba(217, 119, 6, 0.9);
+            color: #ffffff;
+            border-color: rgba(251, 191, 36, 0.6);
+        }
+
+        .tv-btn-exit {
+            width: 38px;
+            padding: 0;
+            margin-left: 0;
+        }
+
+        .tv-btn-exit:hover,
+        .tv-btn-exit:focus {
+            background-color: #dc2626;
+        }
+
+        .event-badge {
+            pointer-events: auto;
+            background-color: rgba(15, 23, 42, 0.72);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 19px;
+            padding: 7px 16px;
+            font-size: 13px;
+            font-weight: 700;
+            color: #f8fafc;
+            max-width: 50%;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .status-overlay {
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
+            z-index: 30;
+            background: -webkit-radial-gradient(center, ellipse cover, #0f172a 0%, #020617 100%);
+            background: radial-gradient(ellipse at center, #0f172a 0%, #020617 100%);
+            display: -webkit-flex;
+            display: flex;
+            -webkit-flex-direction: column;
+            flex-direction: column;
+            -webkit-align-items: center;
+            align-items: center;
+            -webkit-justify-content: center;
+            justify-content: center;
+            padding: 24px;
+            text-align: center;
+        }
+
+        .spinner-ring {
+            width: 56px;
+            height: 56px;
+            border: 4px solid rgba(255, 255, 255, 0.14);
+            border-top-color: #eab308;
+            border-radius: 50%;
+            margin-bottom: 22px;
+            -webkit-animation: spin 1s linear infinite;
+            animation: spin 1s linear infinite;
+        }
+
+        .status-title {
+            margin: 0 0 10px 0;
+            font-size: 24px;
+            font-weight: 900;
+            color: #ffffff;
+        }
+
+        .status-subtitle {
+            margin: 0 0 24px 0;
+            font-size: 15px;
+            color: #94a3b8;
+            max-width: 540px;
+            line-height: 1.7;
+        }
+
+        .overlay-actions {
+            display: -webkit-flex;
+            display: flex;
+            -webkit-align-items: center;
+            align-items: center;
+            -webkit-justify-content: center;
+            justify-content: center;
+            -webkit-flex-wrap: wrap;
+            flex-wrap: wrap;
+        }
+
+        .action-primary {
+            height: 44px;
+            padding: 0 24px;
+            margin: 6px;
+            border-radius: 12px;
+            border: none;
+            background-color: #eab308;
+            color: #020617;
+            font-family: 'Vazirmatn', Tahoma, sans-serif;
+            font-size: 14px;
+            font-weight: 900;
+            cursor: pointer;
+            text-decoration: none;
+            display: -webkit-inline-flex;
+            display: inline-flex;
+            -webkit-align-items: center;
+            align-items: center;
+            -webkit-justify-content: center;
+            justify-content: center;
+        }
+
+        .action-primary:hover,
+        .action-primary:focus {
+            background-color: #facc15;
+            outline: 2px solid #ffffff;
+        }
+
+        .action-secondary {
+            height: 44px;
+            padding: 0 22px;
+            margin: 6px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.22);
+            background-color: rgba(255, 255, 255, 0.08);
+            color: #f1f5f9;
+            font-family: 'Vazirmatn', Tahoma, sans-serif;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            text-decoration: none;
+            display: -webkit-inline-flex;
+            display: inline-flex;
+            -webkit-align-items: center;
+            align-items: center;
+            -webkit-justify-content: center;
+            justify-content: center;
+        }
+
+        .action-secondary:hover,
+        .action-secondary:focus {
+            background-color: rgba(255, 255, 255, 0.2);
+            outline: 2px solid #ffffff;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="live-root">
+        <div class="top-controls">
+            <div id="eventBadge" class="event-badge">پخش زنده مراسم</div>
+
+            <div class="controls-group">
+                <button id="muteToggleBtn" type="button" class="tv-btn tv-btn-warn hidden" onclick="window.__toggleMute()">
+                    <i class="fas fa-volume-mute" style="margin-left: 6px;"></i>
+                    <span>فعال‌سازی صدا</span>
+                </button>
+                <button id="retryTopBtn" type="button" class="tv-btn" onclick="window.__manualReconnect()">
+                    <i class="fas fa-sync-alt" style="margin-left: 6px;"></i>
+                    <span>اتصال مجدد</span>
+                </button>
+                <a href="/display" class="tv-btn">
+                    <i class="fas fa-desktop" style="margin-left: 6px;"></i>
+                    <span>نمایشگر اسامی</span>
+                </a>
+                <button type="button" class="tv-btn tv-btn-exit" onclick="window.location.href='/'" title="صفحه اصلی">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+
+        <video id="liveVideo" class="video-element" controls playsinline autoplay></video>
+
+        <div id="statusOverlay" class="status-overlay">
+            <div class="spinner-ring"></div>
+            <h2 id="statusTitle" class="status-title">در حال اتصال به پخش زنده...</h2>
+            <p id="statusSubtitle" class="status-subtitle">
+                در حال بررسی آماده بودن جریان پخش زنده. به محض فعال شدن استریم، تصویر به صورت خودکار نمایش داده می‌شود.
+            </p>
+            <div class="overlay-actions">
+                <button type="button" class="action-primary" onclick="window.__manualReconnect()">
+                    <i class="fas fa-play" style="margin-left: 8px;"></i>
+                    <span>تلاش مجدد / پخش</span>
+                </button>
+                <a href="/display" class="action-secondary">
+                    <i class="fas fa-list" style="margin-left: 8px;"></i>
+                    <span>رفتن به نمایشگر اسامی</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            function getOrigin() {
+                if (window.location && window.location.origin) {
+                    return window.location.origin;
+                }
+                if (window.location && window.location.protocol && window.location.host) {
+                    return window.location.protocol + '//' + window.location.host;
+                }
+                return '';
+            }
+
+            function getQueryParam(name) {
+                var search = window.location ? window.location.search : '';
+                if (!search || search.length < 2) return '';
+                var parts = search.substring(1).split('&');
+                for (var i = 0; i < parts.length; i++) {
+                    var kv = parts[i].split('=');
+                    if (decodeURIComponent(kv[0] || '') === name) {
+                        return decodeURIComponent(kv[1] || '');
+                    }
+                }
+                return '';
+            }
+
+            var BASE_URL = getOrigin();
+            var customSrc = getQueryParam('src');
+            var STREAM_URL = customSrc ? customSrc : (BASE_URL + '/live.m3u8');
+
+            var video = document.getElementById('liveVideo');
+            var overlay = document.getElementById('statusOverlay');
+            var statusTitle = document.getElementById('statusTitle');
+            var statusSubtitle = document.getElementById('statusSubtitle');
+            var muteToggleBtn = document.getElementById('muteToggleBtn');
+            var eventBadge = document.getElementById('eventBadge');
+
+            var hlsInstance = null;
+            var pollTimer = null;
+            var watchdogTimer = null;
+            var lastVideoTime = 0;
+            var freezeTicks = 0;
+            var isConnecting = false;
+
+            function isWebOSTV() {
+                var ua = (navigator && navigator.userAgent) ? navigator.userAgent.toLowerCase() : '';
+                return (
+                    ua.indexOf('web0s') !== -1 ||
+                    ua.indexOf('webos') !== -1 ||
+                    ua.indexOf('netcast') !== -1 ||
+                    ua.indexOf('smarttv') !== -1 ||
+                    ua.indexOf('lge') !== -1
+                );
+            }
+
+            function showOverlay(title, subtitle) {
+                statusTitle.textContent = title;
+                statusSubtitle.textContent = subtitle;
+                overlay.className = 'status-overlay';
+            }
+
+            function hideOverlay() {
+                overlay.className = 'status-overlay hidden';
+            }
+
+            function updateMuteButton() {
+                if (video.muted) {
+                    muteToggleBtn.className = 'tv-btn tv-btn-warn';
+                } else {
+                    muteToggleBtn.className = 'tv-btn tv-btn-warn hidden';
+                }
+            }
+
+            window.__toggleMute = function () {
+                try {
+                    video.muted = !video.muted;
+                    if (!video.muted && video.paused) {
+                        video.play();
+                    }
+                    updateMuteButton();
+                } catch (e) {}
+            };
+
+            function tryPlayWithAudioFallback() {
+                try {
+                    video.muted = false;
+                    var p = video.play();
+                    if (p && typeof p.then === 'function') {
+                        p.then(function () {
+                            updateMuteButton();
+                        }).catch(function () {
+                            try {
+                                video.muted = true;
+                                updateMuteButton();
+                                var p2 = video.play();
+                                if (p2 && typeof p2.catch === 'function') {
+                                    p2.catch(function () {});
+                                }
+                            } catch (e2) {}
+                        });
+                    }
+                } catch (e) {
+                    try {
+                        video.muted = true;
+                        updateMuteButton();
+                        video.play();
+                    } catch (e3) {}
+                }
+            }
+
+            function cleanupPlayer() {
+                if (hlsInstance) {
+                    try {
+                        hlsInstance.destroy();
+                    } catch (e) {}
+                    hlsInstance = null;
+                }
+                try {
+                    video.pause();
+                    video.removeAttribute('src');
+                    video.load();
+                } catch (e) {}
+            }
+
+            function checkStreamReady(callback) {
+                try {
+                    var xhr = new XMLHttpRequest();
+                    var sep = STREAM_URL.indexOf('?') !== -1 ? '&' : '?';
+                    var checkUrl = STREAM_URL + sep + '_nocache=' + (new Date().getTime());
+                    xhr.open('GET', checkUrl, true);
+                    xhr.timeout = 8000;
+                    xhr.onreadystatechange = function () {
+                        if (xhr.readyState === 4) {
+                            var ok = (xhr.status >= 200 && xhr.status < 300 && xhr.responseText && xhr.responseText.indexOf('#EXTM3U') !== -1);
+                            callback(ok, xhr.status);
+                        }
+                    };
+                    xhr.ontimeout = function () {
+                        callback(false, 0);
+                    };
+                    xhr.onerror = function () {
+                        callback(false, 0);
+                    };
+                    xhr.send(null);
+                } catch (e) {
+                    callback(false, 0);
+                }
+            }
+
+            function scheduleReconnect(reasonTitle, reasonSubtitle) {
+                isConnecting = false;
+                if (pollTimer) {
+                    clearTimeout(pollTimer);
+                    pollTimer = null;
+                }
+                showOverlay(reasonTitle, reasonSubtitle);
+                pollTimer = setTimeout(function () {
+                    connectStream();
+                }, 3500);
+            }
+
+            function attachNativeHls(freshUrl) {
+                video.src = freshUrl;
+                tryPlayWithAudioFallback();
+            }
+
+            function attachHlsJs(freshUrl) {
+                var HlsClass = window.Hls;
+                var hls = new HlsClass({
+                    enableWorker: true,
+                    lowLatencyMode: false,
+                    liveSyncDurationCount: 3,
+                    liveMaxLatencyDurationCount: 8,
+                    liveDurationInfinity: true,
+                    maxBufferLength: 30,
+                    maxMaxBufferLength: 60,
+                    manifestLoadingTimeOut: 10000,
+                    manifestLoadingMaxRetry: 4,
+                    manifestLoadingRetryDelay: 2000,
+                    levelLoadingTimeOut: 10000,
+                    fragLoadingTimeOut: 10000
+                });
+
+                hlsInstance = hls;
+                hls.loadSource(freshUrl);
+                hls.attachMedia(video);
+
+                hls.on(HlsClass.Events.MANIFEST_PARSED, function () {
+                    hideOverlay();
+                    tryPlayWithAudioFallback();
+                });
+
+                hls.on(HlsClass.Events.ERROR, function (_evt, data) {
+                    if (data && data.fatal) {
+                        if (data.type === HlsClass.ErrorTypes.MEDIA_ERROR) {
+                            try {
+                                hls.recoverMediaError();
+                            } catch (e) {
+                                cleanupPlayer();
+                                scheduleReconnect('در حال بازیابی پخش زنده...', 'ارتباط تصویری دچار اختلال شد. سیستم به صورت خودکار مجدداً متصل می‌شود.');
+                            }
+                        } else {
+                            cleanupPlayer();
+                            scheduleReconnect('پخش زنده در دسترس نیست', 'در انتظار از سرگیری جریان پخش زنده. به محض برقراری ارتباط پخش شروع می‌شود.');
+                        }
+                    }
+                });
+            }
+
+            function connectStream() {
+                if (isConnecting) return;
+                isConnecting = true;
+
+                if (pollTimer) {
+                    clearTimeout(pollTimer);
+                    pollTimer = null;
+                }
+
+                checkStreamReady(function (isReady) {
+                    if (!isReady) {
+                        scheduleReconnect(
+                            'در انتظار شروع پخش زنده...',
+                            'در حال حاضر استریم فعال نیست یا در حال آماده‌سازی است. این صفحه هر چند ثانیه به صورت خودکار بررسی می‌کند.'
+                        );
+                        return;
+                    }
+
+                    isConnecting = false;
+                    cleanupPlayer();
+
+                    var sep = STREAM_URL.indexOf('?') !== -1 ? '&' : '?';
+                    var freshUrl = STREAM_URL + sep + '_t=' + (new Date().getTime());
+
+                    var canNative = false;
+                    try {
+                        canNative = Boolean(
+                            video.canPlayType('application/vnd.apple.mpegurl') ||
+                            video.canPlayType('application/x-mpegURL')
+                        );
+                    } catch (e) {}
+
+                    var preferNative = isWebOSTV() || canNative;
+                    var hlsSupported = false;
+                    try {
+                        hlsSupported = (typeof window.Hls !== 'undefined' && window.Hls.isSupported());
+                    } catch (e) {}
+
+                    if (preferNative && canNative) {
+                        attachNativeHls(freshUrl);
+                    } else if (hlsSupported) {
+                        attachHlsJs(freshUrl);
+                    } else if (canNative) {
+                        attachNativeHls(freshUrl);
+                    } else {
+                        attachNativeHls(freshUrl);
+                    }
+                });
+            }
+
+            window.__manualReconnect = function () {
+                isConnecting = false;
+                freezeTicks = 0;
+                cleanupPlayer();
+                showOverlay('در حال اتصال مجدد...', 'در حال بررسی و بارگذاری جریان پخش زنده.');
+                connectStream();
+            };
+
+            video.addEventListener('playing', function () {
+                freezeTicks = 0;
+                hideOverlay();
+                updateMuteButton();
+            });
+
+            video.addEventListener('loadedmetadata', function () {
+                hideOverlay();
+            });
+
+            video.addEventListener('error', function () {
+                cleanupPlayer();
+                scheduleReconnect('خطا در دریافت ویدیو', 'در حال تلاش مجدد برای اتصال خودکار به سرور پخش زنده...');
+            });
+
+            video.addEventListener('ended', function () {
+                cleanupPlayer();
+                scheduleReconnect('پخش زنده متوقف شد', 'در انتظار شروع مجدد پخش زنده...');
+            });
+
+            watchdogTimer = setInterval(function () {
+                if (!video.paused && !video.ended) {
+                    if (video.currentTime === lastVideoTime) {
+                        freezeTicks += 1;
+                        if (freezeTicks >= 3) {
+                            freezeTicks = 0;
+                            cleanupPlayer();
+                            scheduleReconnect('تلاش برای اتصال مجدد...', 'تصویر ثابت شده است؛ در حال بارگذاری مجدد جریان پخش زنده.');
+                        }
+                    } else {
+                        freezeTicks = 0;
+                        lastVideoTime = video.currentTime;
+                        hideOverlay();
+                    }
+                }
+            }, 4000);
+
+            function loadEventTitle() {
+                try {
+                    var xhr = new XMLHttpRequest();
+                    xhr.open('GET', BASE_URL + '/api/db/events/active?_t=' + (new Date().getTime()), true);
+                    xhr.timeout = 8000;
+                    xhr.onreadystatechange = function () {
+                        if (xhr.readyState === 4 && xhr.status >= 200 && xhr.status < 300) {
+                            try {
+                                var data = JSON.parse(xhr.responseText);
+                                if (data && data.title) {
+                                    eventBadge.textContent = data.title;
+                                }
+                            } catch (e) {}
+                        }
+                    };
+                    xhr.send(null);
+                } catch (e) {}
+            }
+
+            loadEventTitle();
+            connectStream();
+        })();
+    </script>
+</body>
+</html>

@@ -83,9 +83,14 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
 
       const freshStreamUrl = streamUrl + (streamUrl.includes('?') ? '&' : '?') + '_t=' + Date.now();
 
+      // Check if LG webOS TV / native HLS should be prioritized over MSE hls.js
+      const ua = typeof navigator !== 'undefined' ? navigator.userAgent.toLowerCase() : '';
+      const isWebOS = ua.includes('web0s') || ua.includes('webos') || ua.includes('netcast') || ua.includes('smarttv');
+      const canPlayNativeHls = Boolean(video.canPlayType('application/vnd.apple.mpegurl'));
+
       // Check if HLS.js is supported in window
       const HlsClass = window.Hls;
-      if (HlsClass && HlsClass.isSupported()) {
+      if (!(isWebOS && canPlayNativeHls) && HlsClass && HlsClass.isSupported()) {
         const hls = new HlsClass({
           enableWorker: true,
           lowLatencyMode: false, // Turn off aggressive low latency so browser doesn't hit end-of-buffer
@@ -144,7 +149,7 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
             }
           }
         });
-      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      } else if (canPlayNativeHls) {
         // Native HLS support (Safari / webOS native player)
         video.src = freshStreamUrl;
         

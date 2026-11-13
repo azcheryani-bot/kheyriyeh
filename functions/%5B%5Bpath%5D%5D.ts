@@ -1,0 +1,92 @@
+import { handleCloudflareRequest } from '../cf-adapter';
+
+const DEFAULT_NEON_STREAM_ORIGIN = '';
+
+export async function onRequest(context: { request: Request; env: Record<string, any>; next: () => Promise<Response> }): Promise<Response> {
+  const url = new URL(context.request.url);
+  const path = url.pathname;
+
+  // 1. Live Stream Proxy
+  const isHlsProxyPath =
+    path === '/live.m3u8' ||
+    path.endsWith('.ts') ||
+    (path.startsWith('/live/') && (path.endsWith('.m3u8') || path.endsWith('.ts')));
+
+  if (isHlsProxyPath) {
+    let origin = context.env.S3_ENDPOINT_URL || DEFAULT_NEON_STREAM_ORIGIN;
+    if (!origin) {
+      return new Response('Stream Proxy Error: S3_ENDPOINT_URL is not configured', { status: 500 });
+    }
+    if (!context.env.S3_BUCKET_NAME) {
+      return new Response('Stream Proxy Error: S3_BUCKET_NAME is not configured', { status: 500 });
+    }
+    if (!origin.endsWith(context.env.S3_BUCKET_NAME)) {
+      origin = `${origin.replace(/\/$/, '')}/${context.env.S3_BUCKET_NAME}`;
+    }
+    const targetUrl = path.startsWith('/live/') 
+      ? `${origin}${path.replace(/^\/live/, '')}` 
+      : `${origin}${path}`;
+
+    if (context.request.method === 'OPTIONS') {
+      return new Response(null, {
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
+          'Access-Control-Allow-Headers': '*',
+        }
+      });
+    }
+
+    try {
+      const response = await fetch(targetUrl, {
+        method: context.request.method,
+        headers: context.request.headers
+      });
+
+      const newHeaders = new Headers(response.headers);
+      newHeaders.set('Access-Control-Allow-Origin', '*');
+      newHeaders.set('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+      newHeaders.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+      newHeaders.set('Pragma', 'no-cache');
+      newHeaders.set('Expires', '0');
+
+      if (path.endsWith('.m3u8')) {
+        newHeaders.set('Content-Type', 'application/vnd.apple.mpegurl');
+      } else if (path.endsWith('.ts')) {
+        newHeaders.set('Content-Type', 'video/mp2t');
+      }
+
+      return new Response(response.body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: newHeaders
+      });
+    } catch (e: any) {
+      return new Response(e.message || 'Stream Proxy Error', { status: 500 });
+    }
+  }
+
+  // 2. Pass static assets and non-API routes directly to Cloudflare Pages static asset handler
+  if (!path.startsWith('/api') && !path.startsWith('/sms') && !path.startsWith('/db') && !path.startsWith('/stream')) {
+    const normalizedPath = path.replace(/\/+$/, '') || '/';
+    if (context.env.ASSETS && typeof context.env.ASSETS.fetch === 'function') {
+      if (normalizedPath === '/display' || normalizedPath === '/display.html') {
+        const assetUrl = new URL(url.toString());
+        assetUrl.pathname = '/display.html';
+        return context.env.ASSETS.fetch(new Request(assetUrl.toString(), context.request));
+      }
+      if (normalizedPath === '/live' || normalizedPath === '/live.html' || normalizedPath === '/tv' || normalizedPath === '/watch') {
+        const assetUrl = new URL(url.toString());
+        assetUrl.pathname = '/live.html';
+        return context.env.ASSETS.fetch(new Request(assetUrl.toString(), context.request));
+      }
+    }
+    if (typeof context.next === 'function') {
+      return context.next();
+    }
+  }
+
+  return handleCloudflareRequest(context.request, context.env);
+}
+
+

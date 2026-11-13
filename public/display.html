@@ -2,354 +2,804 @@
 <html lang="fa" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <title>سامانه ی جامع طرح اکرام و باقیات الصالحات - نمایشگر زنده</title>
-    
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['Vazirmatn', 'sans-serif'],
-                    }
-                }
-            }
-        }
-    </script>
-    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@100;300;400;700;900&family=Lalezar&family=Noto+Nastaliq+Urdu:wght@400;700&display=swap" rel="stylesheet">
+
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;700;900&family=Lalezar&family=Noto+Nastaliq+Urdu:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <!-- اتصال به سوکت از طریق CDN برای فایل مستقل -->
     <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
-    
+
     <style>
-        body {
-            font-family: 'Vazirmatn', sans-serif;
+        * {
+            -webkit-box-sizing: border-box;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
             margin: 0;
             padding: 0;
             overflow: hidden;
+            background-color: #020617;
+            color: #f1f5f9;
+            font-family: 'Vazirmatn', Tahoma, Arial, sans-serif;
             -webkit-font-smoothing: antialiased;
         }
-        
-        @keyframes scrollSeamless {
-            0% { transform: translate3d(-50%, 0, 0); }
-            100% { transform: translate3d(0, 0, 0); }
+
+        @-webkit-keyframes scrollSeamless {
+            0% { -webkit-transform: translate3d(-50%, 0, 0); transform: translate3d(-50%, 0, 0); }
+            100% { -webkit-transform: translate3d(0, 0, 0); transform: translate3d(0, 0, 0); }
         }
-        
-        .marquee-content {
+
+        @keyframes scrollSeamless {
+            0% { -webkit-transform: translate3d(-50%, 0, 0); transform: translate3d(-50%, 0, 0); }
+            100% { -webkit-transform: translate3d(0, 0, 0); transform: translate3d(0, 0, 0); }
+        }
+
+        @-webkit-keyframes pulseSlow {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.55; }
+        }
+
+        @keyframes pulseSlow {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.55; }
+        }
+
+        .display-root {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+            overflow: hidden;
+            background-color: #020617;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        .tv-controls {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            z-index: 100;
+            display: -webkit-flex;
             display: flex;
-            width: max-content;
-            will-change: transform;
+            -webkit-align-items: center;
             align-items: center;
+        }
+
+        .tv-btn {
+            display: -webkit-inline-flex;
+            display: inline-flex;
+            -webkit-align-items: center;
+            align-items: center;
+            -webkit-justify-content: center;
+            justify-content: center;
+            height: 34px;
+            padding: 0 12px;
+            margin-right: 8px;
+            border-radius: 17px;
+            background-color: rgba(0, 0, 0, 0.45);
+            color: rgba(255, 255, 255, 0.65);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            font-family: 'Vazirmatn', Tahoma, sans-serif;
+            font-size: 12px;
+            font-weight: 700;
+            text-decoration: none;
+            cursor: pointer;
+            outline: none;
+        }
+
+        .tv-btn:hover,
+        .tv-btn:focus {
+            background-color: rgba(37, 99, 235, 0.85);
+            color: #ffffff;
+            border-color: rgba(255, 255, 255, 0.4);
+        }
+
+        .tv-btn-exit {
+            width: 34px;
+            padding: 0;
+        }
+
+        .tv-btn-exit:hover,
+        .tv-btn-exit:focus {
+            background-color: #dc2626;
+        }
+
+        .bg-layer {
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
+            background-size: cover;
+            background-position: center;
+            z-index: 0;
+            opacity: 0.6;
+        }
+
+        .bg-gradient {
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
+            z-index: 1;
+            background: -webkit-linear-gradient(top, #0f172a 0%, rgba(15, 23, 42, 0.52) 50%, #0f172a 100%);
+            background: linear-gradient(to bottom, #0f172a 0%, rgba(15, 23, 42, 0.52) 50%, #0f172a 100%);
+        }
+
+        .main-layout {
+            position: relative;
+            z-index: 10;
+            display: -webkit-flex;
+            display: flex;
+            -webkit-flex-direction: column;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+        }
+
+        .header-section {
+            -webkit-flex-shrink: 0;
+            flex-shrink: 0;
+            display: -webkit-flex;
+            display: flex;
+            -webkit-align-items: center;
+            align-items: center;
+            -webkit-justify-content: space-between;
+            justify-content: space-between;
+            padding: 16px 48px;
+            height: 27vh;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            background-color: rgba(0, 0, 0, 0.25);
+        }
+
+        .title-box {
+            display: -webkit-flex;
+            display: flex;
+            -webkit-flex-direction: column;
+            flex-direction: column;
+            -webkit-justify-content: center;
+            justify-content: center;
+            height: 100%;
+            max-width: 72%;
+        }
+
+        .event-title {
+            margin: 0;
+            font-weight: 900;
+            color: #ffffff;
+            font-size: 3.5rem;
+            line-height: 1.25;
+            border-right: 8px solid #eab308;
+            padding-right: 24px;
+            text-shadow: 0 4px 8px rgba(0, 0, 0, 0.85);
+            word-wrap: break-word;
+        }
+
+        .deceased-container {
+            height: 100%;
+            padding: 6px 0;
+            display: -webkit-flex;
+            display: flex;
+            -webkit-align-items: center;
+            align-items: center;
+        }
+
+        .deceased-card {
+            position: relative;
+            height: 92%;
+            width: 140px;
+            border-radius: 16px;
+            overflow: hidden;
+            background-color: #1e293b;
+            border: 4px solid rgba(234, 179, 8, 0.85);
+            box-shadow: 0 0 28px rgba(234, 179, 8, 0.3);
+        }
+
+        .deceased-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .deceased-label-bar {
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            padding: 24px 6px 8px 6px;
+            text-align: center;
+            background: -webkit-linear-gradient(bottom, #000000 0%, rgba(0, 0, 0, 0.72) 60%, rgba(0, 0, 0, 0) 100%);
+            background: linear-gradient(to top, #000000 0%, rgba(0, 0, 0, 0.72) 60%, rgba(0, 0, 0, 0) 100%);
+        }
+
+        .deceased-label {
+            font-weight: 700;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9);
+        }
+
+        .marquee-section {
+            -webkit-flex-grow: 1;
+            flex-grow: 1;
+            display: -webkit-flex;
+            display: flex;
+            -webkit-flex-direction: column;
+            flex-direction: column;
+            width: 100%;
+            min-height: 0;
+            background-color: rgba(0, 0, 0, 0.14);
+        }
+
+        .tier-row {
+            width: 100%;
+            position: relative;
+            overflow: hidden;
+            display: -webkit-flex;
+            display: flex;
+            -webkit-align-items: center;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .tier-high { height: 38%; }
+        .tier-mid  { height: 32%; }
+        .tier-low  { height: 30%; }
+
+        .tier-high-active {
+            background: -webkit-linear-gradient(left, rgba(113, 63, 18, 0.35), rgba(113, 63, 18, 0.12), rgba(113, 63, 18, 0.35));
+            background: linear-gradient(to right, rgba(113, 63, 18, 0.35), rgba(113, 63, 18, 0.12), rgba(113, 63, 18, 0.35));
+            border-bottom-color: rgba(234, 179, 8, 0.25);
+        }
+
+        .tier-mid-active {
+            background: -webkit-linear-gradient(left, rgba(30, 58, 138, 0.35), rgba(30, 58, 138, 0.12), rgba(30, 58, 138, 0.35));
+            background: linear-gradient(to right, rgba(30, 58, 138, 0.35), rgba(30, 58, 138, 0.12), rgba(30, 58, 138, 0.35));
+            border-bottom-color: rgba(59, 130, 246, 0.25);
+        }
+
+        .tier-low-active {
+            background: -webkit-linear-gradient(left, rgba(15, 23, 42, 0.45), rgba(30, 41, 59, 0.22), rgba(15, 23, 42, 0.45));
+            background: linear-gradient(to right, rgba(15, 23, 42, 0.45), rgba(30, 41, 59, 0.22), rgba(15, 23, 42, 0.45));
+        }
+
+        .tier-empty {
+            background-color: rgba(0, 0, 0, 0.12);
+        }
+
+        .marquee-content {
+            display: -webkit-flex;
+            display: flex;
+            -webkit-align-items: center;
+            align-items: center;
+            width: auto;
+            white-space: nowrap;
+            will-change: transform;
+        }
+
+        .marquee-empty-box {
+            width: 100%;
+            height: 100%;
+            display: -webkit-flex;
+            display: flex;
+            -webkit-align-items: center;
+            align-items: center;
+            -webkit-justify-content: center;
+            justify-content: center;
+        }
+
+        .marquee-empty-dots {
+            color: rgba(255, 255, 255, 0.22);
+            font-size: 20px;
+            font-weight: 700;
+            -webkit-animation: pulseSlow 2s ease-in-out infinite;
+            animation: pulseSlow 2s ease-in-out infinite;
+        }
+
+        .donor-card {
+            display: -webkit-inline-flex;
+            display: inline-flex;
+            -webkit-flex-direction: column;
+            flex-direction: column;
+            -webkit-align-items: center;
+            align-items: center;
+            -webkit-justify-content: center;
+            justify-content: center;
+            padding: 8px 32px;
+            margin: 0 10px;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            background-color: rgba(255, 255, 255, 0.06);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+            -webkit-flex-shrink: 0;
+            flex-shrink: 0;
+        }
+
+        .donor-name {
+            font-weight: 700;
+            white-space: nowrap;
+            color: #fefce8;
+            line-height: 1.4;
+            text-shadow: 0 3px 6px rgba(0, 0, 0, 0.75);
+        }
+
+        .donor-father {
+            color: rgba(255, 255, 255, 0.88);
+            font-weight: 300;
+            margin-top: 2px;
+            white-space: nowrap;
+        }
+
+        .footer-section {
+            -webkit-flex-shrink: 0;
+            flex-shrink: 0;
+            height: 7vh;
+            display: -webkit-flex;
+            display: flex;
+            -webkit-align-items: center;
+            align-items: center;
+            -webkit-justify-content: center;
+            justify-content: center;
+            background-color: rgba(0, 0, 0, 0.82);
+            border-top: 1px solid rgba(255, 255, 255, 0.12);
+        }
+
+        .footer-text {
+            margin: 0;
+            font-weight: 700;
+            text-align: center;
+            padding: 0 16px;
+            text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
+            -webkit-animation: pulseSlow 2.5s ease-in-out infinite;
+            animation: pulseSlow 2.5s ease-in-out infinite;
+        }
+
+        .announcement-overlay {
+            position: fixed;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
+            background-color: #000000;
+            z-index: 9999;
+            display: -webkit-flex;
+            display: flex;
+            -webkit-align-items: center;
+            align-items: center;
+            -webkit-justify-content: center;
+            justify-content: center;
+        }
+
+        .announcement-img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        @media (max-width: 767px) {
+            .header-section {
+                padding: 12px 16px;
+                height: 24vh;
+            }
+            .event-title {
+                padding-right: 14px;
+                border-right-width: 5px;
+            }
+            .deceased-card {
+                width: 96px;
+            }
+            .donor-card {
+                padding: 6px 18px;
+                margin: 0 6px;
+            }
         }
     </style>
 </head>
-<body class="bg-slate-950 text-slate-100">
+<body>
 
-    <div class="relative w-full h-screen overflow-hidden bg-slate-950 font-sans select-none" dir="ltr">
-        
-        <!-- دکمه خروج کوچک و قابل مشاهده -->
-        <button 
-            id="exitButton"
-            onclick="window.location.href='/'"
-            class="absolute top-3 left-3 z-[100] w-8 h-8 flex items-center justify-center rounded-full bg-black/30 text-white/40 hover:bg-red-600 hover:text-white transition-all duration-300 backdrop-blur-sm border border-white/5 shadow-lg cursor-pointer" 
-            title="خروج از حالت نمایشگر"
-        >
-            <i class="fas fa-times text-xs"></i>
-        </button>
+    <div class="display-root" dir="ltr">
+        <div class="tv-controls">
+            <a href="/live" class="tv-btn" title="پخش زنده ویدیویی">
+                <i class="fas fa-video" style="margin-left: 6px;"></i>
+                <span>پخش زنده ویدیو</span>
+            </a>
+            <button id="exitButton" type="button" onclick="window.location.href='/'" class="tv-btn tv-btn-exit" title="خروج از حالت نمایشگر">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
 
-        <!-- Background Layer -->
-        <div id="bgImage" class="absolute inset-0 bg-cover bg-center z-0 transition-all duration-1000 opacity-60"></div>
-        <div class="absolute inset-0 bg-gradient-to-b from-slate-900 via-slate-900/50 to-slate-900 z-0"></div>
+        <div id="bgImage" class="bg-layer"></div>
+        <div class="bg-gradient"></div>
 
-        <div class="relative z-10 flex flex-col h-full" dir="rtl">
-            
-            <!-- Header Section -->
-            <div class="flex-shrink-0 flex items-center justify-between px-4 md:px-12 py-4 h-[25vh] md:h-[28vh] border-b border-white/5 bg-black/20 backdrop-blur-sm">
-                <div class="flex flex-col justify-center h-full max-w-[70%]">
-                    <h1 id="eventTitle" class="font-black drop-shadow-[0_4px_4px_rgba(0,0,0,0.8)] border-r-8 border-yellow-500 pr-6 transition-all duration-300 break-words leading-tight" style="color: #ffffff; font-size: 3.5rem;">
-                        در حال بارگذاری...
-                    </h1>
+        <div class="main-layout" dir="rtl">
+            <div class="header-section">
+                <div class="title-box">
+                    <h1 id="eventTitle" class="event-title">در حال بارگذاری...</h1>
                 </div>
 
-                <div id="deceasedContainer" class="h-full py-2 flex items-center hidden">
-                    <div class="h-[90%] aspect-[3/4] relative rounded-2xl overflow-hidden shadow-[0_0_30px_rgba(234,179,8,0.3)] ring-4 ring-yellow-500/80 bg-slate-800">
-                       <img id="deceasedImage" src="" class="w-full h-full object-cover" alt="Deceased" />
-                       <div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black via-black/70 to-transparent pt-8 pb-2 text-center">
-                          <span id="deceasedLabel" class="font-bold drop-shadow-md"></span>
-                       </div>
+                <div id="deceasedContainer" class="deceased-container hidden">
+                    <div class="deceased-card">
+                        <img id="deceasedImage" src="" class="deceased-img" alt="تصویر متوفی" />
+                        <div class="deceased-label-bar">
+                            <span id="deceasedLabel" class="deceased-label"></span>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Marquee Lists -->
-            <div class="flex-grow flex flex-col w-full min-h-0 bg-black/10">
-                
-                <!-- High Tier -->
-                <div data-base-class="h-[38%] w-full relative overflow-hidden flex items-center" class="h-[38%] w-full relative overflow-hidden flex items-center" dir="ltr">
+            <div class="marquee-section">
+                <div id="highWrapper" class="tier-row tier-high tier-empty" dir="ltr">
                     <div id="highMarquee" class="marquee-content"></div>
                 </div>
-
-                <!-- Mid Tier -->
-                <div data-base-class="h-[32%] w-full relative overflow-hidden flex items-center" class="h-[32%] w-full relative overflow-hidden flex items-center" dir="ltr">
+                <div id="midWrapper" class="tier-row tier-mid tier-empty" dir="ltr">
                     <div id="midMarquee" class="marquee-content"></div>
                 </div>
-
-                <!-- Low Tier -->
-                <div data-base-class="h-[30%] w-full relative overflow-hidden flex items-center" class="h-[30%] w-full relative overflow-hidden flex items-center" dir="ltr">
+                <div id="lowWrapper" class="tier-row tier-low tier-empty" dir="ltr">
                     <div id="lowMarquee" class="marquee-content"></div>
                 </div>
-
             </div>
 
-            <!-- Footer -->
-            <div class="flex-shrink-0 h-[7vh] flex items-center justify-center bg-black/80 backdrop-blur-md border-t border-white/10">
-                <p id="footerText" class="font-bold animate-pulse text-center px-4 drop-shadow-lg text-lg">
-                </p>
+            <div class="footer-section">
+                <p id="footerText" class="footer-text"></p>
             </div>
-
         </div>
     </div>
 
-    <!-- Announcement Overlay -->
-    <div id="announcementOverlay" class="fixed inset-0 bg-black z-[9999] flex items-center justify-center hidden">
-        <button onclick="window.location.href='/'" class="absolute top-4 left-4 text-white/50 hover:text-white z-50 p-4"><i class="fas fa-times text-2xl"></i></button>
-        <img id="announcementImg" src="" class="max-w-full max-h-full object-contain" alt="Announcement" />
+    <div id="announcementOverlay" class="announcement-overlay hidden">
+        <button type="button" onclick="window.location.href='/'" class="tv-btn tv-btn-exit" style="position: absolute; top: 16px; left: 16px; z-index: 50;">
+            <i class="fas fa-times"></i>
+        </button>
+        <img id="announcementImg" src="" class="announcement-img" alt="اطلاعیه" />
     </div>
 
     <script>
-        const DEFAULT_SETTINGS = {
-            fontSize: 40,
-            scrollSpeed: 20,
-            fontSizeHigh: 64,
-            fontSizeMid: 48,
-            fontSizeLow: 36,
-            speedHigh: 14,
-            speedMid: 20,
-            speedLow: 24,
-            highThreshold: 5000000,
-            midThreshold: 1000000,
-            fontHigh: 'Vazirmatn',
-            fontMid: 'Vazirmatn',
-            fontLow: 'Vazirmatn',
-            showAnnouncement: false,
-            eventTitle: 'مراسم ترحیم',
-            titleColor: '#ffffff',
-            titleSize: 3.5,
-            deceasedLabel: 'شادروان',
-            deceasedLabelColor: '#fef3c7',
-            deceasedLabelSize: 12,
-            footerText: 'شادی روح درگذشتگان صلوات',
-            footerColor: '#ffffff',
-            footerSize: 14,
-        };
+        (function () {
+            var DEFAULT_SETTINGS = {
+                fontSize: 40,
+                scrollSpeed: 20,
+                fontSizeHigh: 64,
+                fontSizeMid: 48,
+                fontSizeLow: 36,
+                speedHigh: 14,
+                speedMid: 20,
+                speedLow: 24,
+                highThreshold: 5000000,
+                midThreshold: 1000000,
+                fontHigh: 'Vazirmatn',
+                fontMid: 'Vazirmatn',
+                fontLow: 'Vazirmatn',
+                showAnnouncement: false,
+                eventTitle: 'مراسم ترحیم',
+                titleColor: '#ffffff',
+                titleSize: 3.5,
+                deceasedLabel: 'شادروان',
+                deceasedLabelColor: '#fef3c7',
+                deceasedLabelSize: 12,
+                footerText: 'شادی روح درگذشتگان صلوات',
+                footerColor: '#ffffff',
+                footerSize: 14
+            };
 
-        let currentSettings = { ...DEFAULT_SETTINGS };
-        let currentDonations = [];
-        let activeEventId = 'active';
+            function cloneObj(src) {
+                var out = {};
+                if (!src) return out;
+                for (var k in src) {
+                    if (Object.prototype.hasOwnProperty.call(src, k)) {
+                        out[k] = src[k];
+                    }
+                }
+                return out;
+            }
 
-        const BASE_URL = 'https://kheyriyeh3.hudsonparker87.workers.dev';
+            function assignObj(target, source) {
+                if (!source) return target;
+                for (var k in source) {
+                    if (Object.prototype.hasOwnProperty.call(source, k) && source[k] !== undefined && source[k] !== null) {
+                        target[k] = source[k];
+                    }
+                }
+                return target;
+            }
 
-        // توابع کمکی برای درخواست به سرور
-        async function fetchJSON(endpoint) {
+            function getNum(val, fallback) {
+                return (typeof val === 'number' && !isNaN(val)) ? val : fallback;
+            }
+
+            function getBaseUrl() {
+                if (window.location && window.location.origin) {
+                    return window.location.origin;
+                }
+                if (window.location && window.location.protocol && window.location.host) {
+                    return window.location.protocol + '//' + window.location.host;
+                }
+                return '';
+            }
+
+            var BASE_URL = getBaseUrl();
+            var currentSettings = cloneObj(DEFAULT_SETTINGS);
+            var currentDonations = [];
+            var activeEventId = 'active';
+            var lastRenderHash = '';
+            var loadedCustomFont = '';
+            var isUpdating = false;
+
+            function fetchJSON(endpoint, callback) {
+                try {
+                    var xhr = new XMLHttpRequest();
+                    var sep = endpoint.indexOf('?') !== -1 ? '&' : '?';
+                    var url = BASE_URL + endpoint + sep + '_t=' + (new Date().getTime());
+                    xhr.open('GET', url, true);
+                    xhr.timeout = 12000;
+                    xhr.onreadystatechange = function () {
+                        if (xhr.readyState === 4) {
+                            if (xhr.status >= 200 && xhr.status < 300) {
+                                try {
+                                    var parsed = JSON.parse(xhr.responseText);
+                                    callback(null, parsed);
+                                } catch (parseErr) {
+                                    callback(parseErr, null);
+                                }
+                            } else {
+                                callback(new Error('HTTP ' + xhr.status), null);
+                            }
+                        }
+                    };
+                    xhr.ontimeout = function () {
+                        callback(new Error('Timeout'), null);
+                    };
+                    xhr.onerror = function () {
+                        callback(new Error('Network error'), null);
+                    };
+                    xhr.send(null);
+                } catch (e) {
+                    callback(e, null);
+                }
+            }
+
+            function updateData() {
+                if (isUpdating) return;
+                isUpdating = true;
+
+                var pending = 2;
+                var eventData = null;
+                var configData = null;
+
+                function onBothLoaded() {
+                    pending -= 1;
+                    if (pending > 0) return;
+
+                    if (eventData && eventData.id) {
+                        activeEventId = eventData.id;
+                    }
+
+                    var configVal = (configData && configData.value && typeof configData.value === 'object') ? configData.value : {};
+                    var effectiveTitle = (eventData && eventData.title)
+                        ? eventData.title
+                        : (configVal.eventTitle || DEFAULT_SETTINGS.eventTitle);
+
+                    var merged = cloneObj(DEFAULT_SETTINGS);
+                    assignObj(merged, configVal);
+                    merged.eventTitle = effectiveTitle;
+                    currentSettings = merged;
+
+                    fetchJSON('/api/db/donations/' + encodeURIComponent(activeEventId) + '/approved', function (err, donations) {
+                        isUpdating = false;
+                        if (!err && donations && Object.prototype.toString.call(donations) === '[object Array]') {
+                            currentDonations = donations;
+                        }
+                        render(false);
+                    });
+                }
+
+                fetchJSON('/api/db/events/active', function (err, data) {
+                    if (!err) eventData = data;
+                    onBothLoaded();
+                });
+
+                fetchJSON('/api/db/config/displaySettings', function (err, data) {
+                    if (!err) configData = data;
+                    onBothLoaded();
+                });
+            }
+
+            function createMarqueeItem(item, fontSize, font) {
+                var div = document.createElement('div');
+                div.className = 'donor-card';
+                div.style.fontFamily = (font || 'Vazirmatn') + ', Tahoma, sans-serif';
+
+                var nameSpan = document.createElement('span');
+                nameSpan.className = 'donor-name';
+                nameSpan.style.fontSize = fontSize + 'px';
+                nameSpan.textContent = item.donorName || '';
+                div.appendChild(nameSpan);
+
+                if (item.fatherName) {
+                    var fatherSpan = document.createElement('span');
+                    fatherSpan.className = 'donor-father';
+                    fatherSpan.style.fontSize = Math.round(fontSize * 0.55) + 'px';
+                    fatherSpan.textContent = '(' + item.fatherName + ')';
+                    div.appendChild(fatherSpan);
+                }
+
+                return div;
+            }
+
+            function renderMarqueeRow(wrapperId, containerId, list, speed, fontSize, font, activeClass, baseTierClass) {
+                var wrapper = document.getElementById(wrapperId);
+                var container = document.getElementById(containerId);
+                if (!wrapper || !container) return;
+
+                while (container.firstChild) {
+                    container.removeChild(container.firstChild);
+                }
+
+                if (!list || list.length === 0) {
+                    wrapper.className = 'tier-row ' + baseTierClass + ' tier-empty';
+                    container.style.webkitAnimation = 'none';
+                    container.style.animation = 'none';
+                    container.className = 'marquee-empty-box';
+
+                    var emptyDots = document.createElement('span');
+                    emptyDots.className = 'marquee-empty-dots';
+                    emptyDots.textContent = '...';
+                    container.appendChild(emptyDots);
+                    return;
+                }
+
+                wrapper.className = 'tier-row ' + baseTierClass + ' ' + activeClass;
+                container.className = 'marquee-content';
+
+                var items = list.slice();
+                var MIN_ITEMS = 40;
+                while (items.length < MIN_ITEMS) {
+                    items = items.concat(list);
+                }
+                var renderList = items.concat(items);
+
+                var safeSpeed = (speed && speed > 0) ? speed : 20;
+                var duration = (renderList.length * 120) / safeSpeed;
+
+                for (var i = 0; i < renderList.length; i++) {
+                    container.appendChild(createMarqueeItem(renderList[i], fontSize, font));
+                }
+
+                var animValue = 'scrollSeamless ' + duration + 's linear infinite';
+                container.style.webkitAnimation = animValue;
+                container.style.animation = animValue;
+            }
+
+            function render(force) {
+                var isMobile = window.innerWidth < 768;
+                var renderHash = JSON.stringify({
+                    s: currentSettings,
+                    d: currentDonations,
+                    m: isMobile
+                });
+
+                if (!force && renderHash === lastRenderHash) {
+                    return;
+                }
+                lastRenderHash = renderHash;
+
+                var fontScale = isMobile ? 0.5 : 1;
+                var baseFontSize = getNum(currentSettings.fontSize, 40);
+                var baseSpeed = getNum(currentSettings.scrollSpeed, 20);
+
+                var speedHigh = getNum(currentSettings.speedHigh, Math.round(baseSpeed * 0.7));
+                var speedMid = getNum(currentSettings.speedMid, baseSpeed);
+                var speedLow = getNum(currentSettings.speedLow, Math.round(baseSpeed * 1.2));
+
+                var fontSizeHigh = getNum(currentSettings.fontSizeHigh, Math.round(baseFontSize * 1.6)) * fontScale;
+                var fontSizeMid = getNum(currentSettings.fontSizeMid, Math.round(baseFontSize * 1.2)) * fontScale;
+                var fontSizeLow = getNum(currentSettings.fontSizeLow, Math.round(baseFontSize * 0.9)) * fontScale;
+
+                var overlay = document.getElementById('announcementOverlay');
+                var announcementImg = document.getElementById('announcementImg');
+                if (currentSettings.showAnnouncement && currentSettings.announcementImage) {
+                    overlay.className = 'announcement-overlay';
+                    announcementImg.src = currentSettings.announcementImage;
+                    return;
+                } else {
+                    overlay.className = 'announcement-overlay hidden';
+                }
+
+                var bgImage = document.getElementById('bgImage');
+                if (currentSettings.bgImage) {
+                    bgImage.style.backgroundImage = 'url(' + currentSettings.bgImage + ')';
+                } else {
+                    bgImage.style.backgroundImage = 'none';
+                }
+
+                var titleEl = document.getElementById('eventTitle');
+                titleEl.textContent = currentSettings.eventTitle || DEFAULT_SETTINGS.eventTitle;
+                titleEl.style.color = currentSettings.titleColor || '#ffffff';
+                var rawTitleSize = getNum(currentSettings.titleSize, 3.5);
+                titleEl.style.fontSize = (isMobile ? Math.max(1.5, rawTitleSize * 0.6) : rawTitleSize) + 'rem';
+
+                var deceasedContainer = document.getElementById('deceasedContainer');
+                if (currentSettings.deceasedImage) {
+                    deceasedContainer.className = 'deceased-container';
+                    document.getElementById('deceasedImage').src = currentSettings.deceasedImage;
+
+                    var label = document.getElementById('deceasedLabel');
+                    label.textContent = currentSettings.deceasedLabel || '';
+                    label.style.color = currentSettings.deceasedLabelColor || '#fef3c7';
+                    label.style.fontSize = (isMobile ? 12 : getNum(currentSettings.deceasedLabelSize, 12)) + 'px';
+                } else {
+                    deceasedContainer.className = 'deceased-container hidden';
+                }
+
+                if (currentSettings.customFontData && currentSettings.customFontData !== loadedCustomFont && typeof FontFace !== 'undefined') {
+                    loadedCustomFont = currentSettings.customFontData;
+                    try {
+                        var fontFace = new FontFace('CustomUploaded', 'url(' + currentSettings.customFontData + ')');
+                        fontFace.load().then(function (loadedFace) {
+                            if (document.fonts) {
+                                document.fonts.add(loadedFace);
+                            }
+                        }).catch(function () {});
+                    } catch (e) {}
+                }
+
+                var footerEl = document.getElementById('footerText');
+                footerEl.textContent = currentSettings.footerText || '';
+                footerEl.style.color = currentSettings.footerColor || '#ffffff';
+                var rawFooterSize = getNum(currentSettings.footerSize, 14);
+                footerEl.style.fontSize = (isMobile ? rawFooterSize * 0.8 : rawFooterSize) + 'px';
+
+                var highThreshold = getNum(currentSettings.highThreshold, 5000000);
+                var midThreshold = getNum(currentSettings.midThreshold, 1000000);
+
+                var high = [];
+                var mid = [];
+                var low = [];
+                for (var i = 0; i < currentDonations.length; i++) {
+                    var d = currentDonations[i];
+                    if (d && !d.hideName) {
+                        var amt = Number(d.amount) || 0;
+                        if (amt >= highThreshold) {
+                            high.push(d);
+                        } else if (amt >= midThreshold) {
+                            mid.push(d);
+                        } else {
+                            low.push(d);
+                        }
+                    }
+                }
+
+                renderMarqueeRow('highWrapper', 'highMarquee', high, speedHigh, fontSizeHigh, currentSettings.fontHigh, 'tier-high-active', 'tier-high');
+                renderMarqueeRow('midWrapper', 'midMarquee', mid, speedMid, fontSizeMid, currentSettings.fontMid, 'tier-mid-active', 'tier-mid');
+                renderMarqueeRow('lowWrapper', 'lowMarquee', low, speedLow, fontSizeLow, currentSettings.fontLow, 'tier-low-active', 'tier-low');
+            }
+
+            updateData();
+            setInterval(updateData, 8000);
+
             try {
-                const url = BASE_URL + endpoint;
-                // جلوگیری از کش شدن اطلاعات
-                const res = await fetch(url + (url.includes('?') ? '&' : '?') + '_t=' + Date.now());
-                if (!res.ok) return null;
-                return await res.json();
-            } catch (e) {
-                console.error('Fetch error:', e);
-                return null;
-            }
-        }
+                if (typeof io !== 'undefined' && BASE_URL) {
+                    var socket = io(BASE_URL, {
+                        path: '/socket.io',
+                        transports: ['websocket', 'polling'],
+                        reconnectionAttempts: 3
+                    });
+                    socket.on('db_change', function () {
+                        updateData();
+                    });
+                }
+            } catch (e) {}
 
-        async function updateData() {
-            const [eventData, configData] = await Promise.all([
-                fetchJSON('/api/db/events/active'),
-                fetchJSON('/api/db/config/displaySettings')
-            ]);
-            
-            if (eventData && eventData.id) activeEventId = eventData.id;
-            
-            const configVal = (configData && configData.value) ? configData.value : {};
-            const effectiveTitle = (eventData && eventData.title) ? eventData.title : (configVal.eventTitle || DEFAULT_SETTINGS.eventTitle);
-            
-            currentSettings = { ...DEFAULT_SETTINGS, ...configVal, eventTitle: effectiveTitle };
-            
-            const donations = await fetchJSON(`/api/db/donations/${activeEventId}/approved`);
-            if (donations && Array.isArray(donations)) {
-                currentDonations = donations;
-            }
-
-            render();
-        }
-
-        function createMarqueeItem(item, fontSize, font) {
-            const div = document.createElement('div');
-            div.className = "flex flex-col items-center justify-center px-6 md:px-10 mx-2 py-2 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md shadow-xl flex-shrink-0";
-            div.style.fontFamily = font;
-            div.style.minWidth = 'fit-content';
-            
-            const nameSpan = document.createElement('span');
-            nameSpan.className = "font-bold whitespace-nowrap drop-shadow-lg text-yellow-50";
-            nameSpan.style.fontSize = `${fontSize}px`;
-            nameSpan.style.lineHeight = '1.4';
-            nameSpan.textContent = item.donorName;
-            div.appendChild(nameSpan);
-
-            if (item.fatherName) {
-                const fatherSpan = document.createElement('span');
-                fatherSpan.className = "text-white/90 font-light mt-0.5 whitespace-nowrap tracking-wide";
-                fatherSpan.style.fontSize = `${fontSize * 0.55}px`;
-                fatherSpan.textContent = `(${item.fatherName})`;
-                div.appendChild(fatherSpan);
-            }
-
-            return div;
-        }
-
-        function renderMarqueeRow(containerId, list, speed, fontSize, font, bgClasses, emptyClasses) {
-            const wrapper = document.getElementById(containerId).parentElement;
-            const container = document.getElementById(containerId);
-            container.innerHTML = '';
-            
-            if (!list || list.length === 0) {
-                const empty = document.createElement('div');
-                empty.className = "w-full flex items-center justify-center h-full";
-                empty.innerHTML = `<span class="text-white/20 text-lg font-bold italic animate-pulse">...</span>`;
-                
-                // Override wrapper classes to match empty state of Display.tsx
-                wrapper.className = wrapper.dataset.baseClass + " " + emptyClasses;
-                
-                container.style.animation = 'none';
-                container.className = "w-full h-full";
-                container.appendChild(empty);
-                return;
-            }
-
-            // Restore wrapper classes
-            wrapper.className = wrapper.dataset.baseClass + " " + bgClasses;
-            container.className = "flex w-max will-change-transform items-center";
-
-            let items = [...list];
-            const MIN_ITEMS = 40;
-            while (items.length < MIN_ITEMS) {
-                items = [...items, ...list];
-            }
-            const renderList = [...items, ...items];
-            
-            const duration = (renderList.length * 120) / (speed || 20);
-
-            renderList.forEach(item => {
-                container.appendChild(createMarqueeItem(item, fontSize, font));
+            window.addEventListener('resize', function () {
+                render(true);
             });
-
-            container.style.animation = `scrollSeamless ${duration}s linear infinite`;
-        }
-
-        function render() {
-            const isMobile = window.innerWidth < 768;
-            const fontScale = isMobile ? 0.5 : 1;
-
-            const speedHigh = currentSettings.speedHigh ?? Math.round((currentSettings.scrollSpeed || 20) * 0.7);
-            const speedMid = currentSettings.speedMid ?? (currentSettings.scrollSpeed || 20);
-            const speedLow = currentSettings.speedLow ?? Math.round((currentSettings.scrollSpeed || 20) * 1.2);
-
-            const fontSizeHigh = (currentSettings.fontSizeHigh ?? Math.round((currentSettings.fontSize || 40) * 1.6)) * fontScale;
-            const fontSizeMid = (currentSettings.fontSizeMid ?? Math.round((currentSettings.fontSize || 40) * 1.2)) * fontScale;
-            const fontSizeLow = (currentSettings.fontSizeLow ?? Math.round((currentSettings.fontSize || 40) * 0.9)) * fontScale;
-
-            // اطلاعیه تمام‌صفحه
-            const overlay = document.getElementById('announcementOverlay');
-            if (currentSettings.showAnnouncement && currentSettings.announcementImage) {
-                overlay.classList.remove('hidden');
-                document.getElementById('announcementImg').src = currentSettings.announcementImage;
-                return; // در صورت نمایش بنر اطلاعیه، ادامه رندر نیاز نیست
-            } else {
-                overlay.classList.add('hidden');
-            }
-
-            // تصویر پس‌زمینه
-            const bgImage = document.getElementById('bgImage');
-            if (currentSettings.bgImage) {
-                bgImage.style.backgroundImage = `url(${currentSettings.bgImage})`;
-            } else {
-                bgImage.style.backgroundImage = 'none';
-            }
-
-            // سربرگ (Header)
-            const titleEl = document.getElementById('eventTitle');
-            titleEl.textContent = currentSettings.eventTitle;
-            titleEl.style.color = currentSettings.titleColor;
-            titleEl.style.fontSize = `${isMobile ? Math.max(1.5, currentSettings.titleSize * 0.6) : currentSettings.titleSize}rem`;
-
-            // تصویر متوفی
-            const deceasedContainer = document.getElementById('deceasedContainer');
-            if (currentSettings.deceasedImage) {
-                deceasedContainer.classList.remove('hidden');
-                document.getElementById('deceasedImage').src = currentSettings.deceasedImage;
-                
-                const label = document.getElementById('deceasedLabel');
-                label.textContent = currentSettings.deceasedLabel;
-                label.style.color = currentSettings.deceasedLabelColor;
-                label.style.fontSize = `${isMobile ? 12 : currentSettings.deceasedLabelSize}px`;
-            } else {
-                deceasedContainer.classList.add('hidden');
-            }
-
-            // بارگذاری فونت شخصی (در صورت وجود)
-            if (currentSettings.customFontData && typeof FontFace !== 'undefined') {
-                const fontFace = new FontFace('CustomUploaded', `url(${currentSettings.customFontData})`);
-                fontFace.load().then(loadedFace => {
-                    if (document.fonts) document.fonts.add(loadedFace);
-                }).catch(e => console.error("Font load error:", e));
-            }
-
-            // پاصفحه (Footer)
-            const footerEl = document.getElementById('footerText');
-            footerEl.textContent = currentSettings.footerText;
-            footerEl.style.color = currentSettings.footerColor;
-            footerEl.style.fontSize = `${isMobile ? currentSettings.footerSize * 0.8 : currentSettings.footerSize}px`;
-
-            // جداسازی ردیف‌های اهداکنندگان
-            const visibleDonations = currentDonations.filter(d => !d.hideName);
-            const high = visibleDonations.filter(d => d.amount >= currentSettings.highThreshold);
-            const mid = visibleDonations.filter(d => d.amount < currentSettings.highThreshold && d.amount >= currentSettings.midThreshold);
-            const low = visibleDonations.filter(d => d.amount < currentSettings.midThreshold);
-
-            // رندر نوارهای متحرک
-            renderMarqueeRow('highMarquee', high, speedHigh, fontSizeHigh, currentSettings.fontHigh, 
-                "bg-gradient-to-r from-yellow-900/30 via-yellow-900/10 to-yellow-900/30 border-yellow-500/20 border-b border-white/10 backdrop-blur-sm shadow-lg", 
-                "border-b border-white/5 bg-black/10 backdrop-blur-sm");
-                
-            renderMarqueeRow('midMarquee', mid, speedMid, fontSizeMid, currentSettings.fontMid, 
-                "bg-gradient-to-r from-blue-900/30 via-blue-900/10 to-blue-900/30 border-blue-500/20 border-b border-white/10 backdrop-blur-sm shadow-lg", 
-                "border-b border-white/5 bg-black/10 backdrop-blur-sm");
-                
-            renderMarqueeRow('lowMarquee', low, speedLow, fontSizeLow, currentSettings.fontLow, 
-                "bg-gradient-to-r from-slate-900/40 via-slate-800/20 to-slate-900/40 border-white/5 border-b border-white/10 backdrop-blur-sm shadow-lg", 
-                "border-b border-white/5 bg-black/10 backdrop-blur-sm");
-        }
-
-        // اجرای اولیه
-        updateData();
-        
-        // درخواست پشتیبان به سرور (در صورت قطعی احتمالی سوکت هر 30 ثانیه)
-        setInterval(updateData, 30000); 
-
-        // اتصال به Socket.io
-        if (typeof io !== 'undefined') {
-            const socket = io(BASE_URL, { path: '/socket.io', transports: ['websocket', 'polling'] });
-            socket.on('db_change', () => {
-                updateData();
-            });
-        }
-        
-        // بروزرسانی اندازه فونت‌ها هنگام تغییر سایز صفحه
-        window.addEventListener('resize', render);
-
+        })();
     </script>
 </body>
 </html>

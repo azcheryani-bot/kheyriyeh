@@ -8,7 +8,12 @@ export default {
     const path = url.pathname;
 
     // 1. Embedded Anti-Sanction Stream Proxy (HLS Live Stream & TS Video Segments)
-    if (path === '/live.m3u8' || path.endsWith('.ts') || path.startsWith('/live/')) {
+    const isHlsProxyPath =
+      path === '/live.m3u8' ||
+      path.endsWith('.ts') ||
+      (path.startsWith('/live/') && (path.endsWith('.m3u8') || path.endsWith('.ts')));
+
+    if (isHlsProxyPath) {
       let origin = env.S3_ENDPOINT_URL || DEFAULT_NEON_STREAM_ORIGIN;
       if (!origin) {
         return new Response('Stream Proxy Error: S3_ENDPOINT_URL is not configured', { status: 500 });
@@ -62,9 +67,20 @@ export default {
       }
     }
 
-    // 2. Delegate static assets to Cloudflare Assets binding if not an API route
+    // 2. Delegate static assets (including dedicated TV pages /display and /live) to Cloudflare Assets binding
     if (!path.startsWith('/api') && !path.startsWith('/sms') && !path.startsWith('/db') && !path.startsWith('/stream')) {
       if (env.ASSETS && typeof env.ASSETS.fetch === 'function') {
+        const normalizedPath = path.replace(/\/+$/, '') || '/';
+        if (normalizedPath === '/display' || normalizedPath === '/display.html') {
+          const assetUrl = new URL(url.toString());
+          assetUrl.pathname = '/display.html';
+          return env.ASSETS.fetch(new Request(assetUrl.toString(), request));
+        }
+        if (normalizedPath === '/live' || normalizedPath === '/live.html' || normalizedPath === '/tv' || normalizedPath === '/watch') {
+          const assetUrl = new URL(url.toString());
+          assetUrl.pathname = '/live.html';
+          return env.ASSETS.fetch(new Request(assetUrl.toString(), request));
+        }
         return env.ASSETS.fetch(request);
       }
     }

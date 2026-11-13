@@ -21,8 +21,12 @@ app.use((req, res, next) => {
   });
 });
 
-app.get('/display', (req, res) => {
+app.get(['/display', '/display.html'], (req, res) => {
   res.sendFile(path.resolve('public/display.html'));
+});
+
+app.get(['/live', '/live.html', '/tv', '/watch'], (req, res) => {
+  res.sendFile(path.resolve('public/live.html'));
 });
 
 import { checkIpViaProxy } from './niazpardaz-api.js';
@@ -888,7 +892,17 @@ function parseDeliveryCode(code: number): string {
   }
 }
 
-import { streamRouter } from './stream-api.js';
+import { streamRouter, proxyStreamRequest } from './stream-api.js';
+
+// Mount root-level HLS proxy routes for TV & players
+app.all('/live.m3u8', (req, res) => proxyStreamRequest('/live.m3u8', req, res));
+app.use((req, res, next) => {
+  if (req.path.endsWith('.ts') || (req.path.startsWith('/live/') && (req.path.endsWith('.m3u8') || req.path.endsWith('.ts')))) {
+    const clean = req.path.startsWith('/live/') ? req.path.replace(/^\/live/, '') : req.path;
+    return proxyStreamRequest(clean, req, res);
+  }
+  next();
+});
 
 // Mount SMS router under all potential base paths
 app.use('/api/sms', smsRouter);

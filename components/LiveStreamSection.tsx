@@ -611,6 +611,68 @@ export const LiveStreamSection: React.FC<LiveStreamSectionProps> = ({
             </div>
           )}
 
+          {/* Direct LG webOS Smart TV Browser Links */}
+          {currentHostOrigin && (
+            <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2.5">
+              <div className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center justify-between">
+                <span>آدرس‌های مستقیم مرورگر تلویزیون LG webOS</span>
+                <span className="text-[11px] font-normal text-slate-500 dark:text-slate-400">سازگار با نسخه ۰۶.۰۰.۱۵</span>
+              </div>
+
+              <div className="grid grid-cols-1 gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 w-24 flex-shrink-0">نمایشگر اسامی:</span>
+                  <input
+                    readOnly
+                    dir="ltr"
+                    value={`${currentHostOrigin}/display`}
+                    className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs font-mono text-slate-700 dark:text-slate-300 select-all"
+                  />
+                  <button
+                    onClick={() => copyToClipboard(`${currentHostOrigin}/display`, 'tv_display')}
+                    className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer flex-shrink-0"
+                  >
+                    {copiedLink === 'tv_display' ? 'کپی شد' : 'کپی'}
+                  </button>
+                  <a
+                    href="/display"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="px-2.5 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold flex-shrink-0"
+                    title="باز کردن نمایشگر"
+                  >
+                    <i className="fas fa-external-link-alt"></i>
+                  </a>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 w-24 flex-shrink-0">پخش ویدیو زنده:</span>
+                  <input
+                    readOnly
+                    dir="ltr"
+                    value={`${currentHostOrigin}/live`}
+                    className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs font-mono text-slate-700 dark:text-slate-300 select-all"
+                  />
+                  <button
+                    onClick={() => copyToClipboard(`${currentHostOrigin}/live`, 'tv_live')}
+                    className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer flex-shrink-0"
+                  >
+                    {copiedLink === 'tv_live' ? 'کپی شد' : 'کپی'}
+                  </button>
+                  <a
+                    href="/live"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="px-2.5 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold flex-shrink-0"
+                    title="باز کردن پلیر زنده"
+                  >
+                    <i className="fas fa-external-link-alt"></i>
+                  </a>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Preview Toggle & Video Element */}
           <div className="pt-2">
             <button
