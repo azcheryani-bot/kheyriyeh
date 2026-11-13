@@ -14,6 +14,7 @@ interface CurrencyInputProps {
   placeholder?: string;
   className?: string;
   required?: boolean;
+  unitLabel?: string;
 }
 
 export const ConfirmDialog: React.FC<{
@@ -79,26 +80,28 @@ export const CurrencyInput: React.FC<CurrencyInputProps> = ({
   onChange, 
   placeholder, 
   className, 
-  required 
+  required,
+  unitLabel = 'تومان'
 }) => {
   const [displayValue, setDisplayValue] = useState('');
+  const [isFocused, setIsFocused] = useState(false);
 
   useEffect(() => {
     if (value === '' || value === null || value === undefined) {
       setDisplayValue('');
     } else {
-      const numValue = typeof value === 'string' ? parseInt(value) : value;
+      const numValue = typeof value === 'string' ? parseInt(value.replace(/[^0-9]/g, ''), 10) : value;
       if (!isNaN(numValue)) {
-        setDisplayValue(numValue.toLocaleString());
+        setDisplayValue(numValue.toLocaleString('en-US'));
       }
     }
-  }, [value]);
+  }, [value, isFocused]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // First, convert any Persian/Arabic digits to English digits
-    let input = convertToEnglishDigits(e.target.value);
+    // Convert Persian/Arabic digits to English digits
+    const input = convertToEnglishDigits(e.target.value);
     
-    // Then, remove all non-digit characters
+    // Remove all non-digit characters
     const rawInput = input.replace(/[^0-9]/g, '');
     
     if (rawInput === '') {
@@ -106,10 +109,14 @@ export const CurrencyInput: React.FC<CurrencyInputProps> = ({
       onChange('');
     } else {
       const num = parseInt(rawInput, 10);
-      setDisplayValue(num.toLocaleString());
-      onChange(rawInput);
+      if (!isNaN(num)) {
+        setDisplayValue(num.toLocaleString('en-US'));
+        onChange(String(num));
+      }
     }
   };
+
+  const paddingClass = unitLabel.length > 6 ? 'pl-20' : 'pl-14';
 
   return (
     <div className="relative w-full">
@@ -117,13 +124,15 @@ export const CurrencyInput: React.FC<CurrencyInputProps> = ({
         type="text"
         inputMode="numeric"
         value={displayValue}
+        onFocus={() => setIsFocused(true)}
+        onBlur={() => setIsFocused(false)}
         onChange={handleChange}
         placeholder={placeholder}
-        className={`${className} pl-12 text-left ltr font-mono focus:ring-2 focus:ring-blue-500 transition-all`}
+        className={`${className} ${paddingClass} text-left ltr font-mono focus:ring-2 focus:ring-blue-500 transition-all`}
         style={{ direction: 'ltr' }}
         required={required}
       />
-      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 text-xs font-bold pointer-events-none">تومان</span>
+      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 text-xs font-bold pointer-events-none">{unitLabel}</span>
     </div>
   );
 };

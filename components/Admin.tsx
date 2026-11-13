@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { dbApi } from '../db-client';
 import { Donation, Event, Admin, DisplaySettings } from '../types';
 import { Spinner, CurrencyInput, ConfirmDialog } from './Shared';
@@ -8,6 +7,58 @@ import { LiveStreamSection } from './LiveStreamSection';
 import { ReceiptPrintModal } from './ReceiptPrintModal';
 import { EventsArchiveManager } from './EventsArchiveManager';
 import { formatJalaliDateTime, formatJalaliDate, formatJalaliTime } from '../persian-utils';
+
+const OBS_IDB_NAME = 'kheyriyeh_obs_storage';
+const OBS_IDB_STORE = 'handles';
+const OBS_IDB_KEY = 'obs_directory_handle';
+
+function openObsIndexedDB(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    if (typeof window === 'undefined' || !('indexedDB' in window)) {
+      return reject(new Error('IndexedDB not supported'));
+    }
+    const req = window.indexedDB.open(OBS_IDB_NAME, 1);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(OBS_IDB_STORE)) {
+        db.createObjectStore(OBS_IDB_STORE);
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function saveObsDirHandleToIDB(handle: any): Promise<void> {
+  try {
+    const db = await openObsIndexedDB();
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(OBS_IDB_STORE, 'readwrite');
+      tx.objectStore(OBS_IDB_STORE).put(handle, OBS_IDB_KEY);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+    if (handle?.name) {
+      localStorage.setItem('obs_saved_folder_name', handle.name);
+    }
+  } catch (e) {
+    console.warn('Could not save OBS directory handle to IndexedDB:', e);
+  }
+}
+
+async function loadObsDirHandleFromIDB(): Promise<any | null> {
+  try {
+    const db = await openObsIndexedDB();
+    return await new Promise<any | null>((resolve, reject) => {
+      const tx = db.transaction(OBS_IDB_STORE, 'readonly');
+      const req = tx.objectStore(OBS_IDB_STORE).get(OBS_IDB_KEY);
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => reject(req.error);
+    });
+  } catch (e) {
+    return null;
+  }
+}
 
 export const DEFAULT_SETTINGS: DisplaySettings = {
   fontSize: 40,
@@ -292,8 +343,22 @@ export const AdminPanel: React.FC<{
   
   // Forms
   const [donationForm, setDonationForm] = useState({ name: '', father: '', mobile: '', amount: '', desc: '', type: 'pos' as any, hide: false });
+  const donorNameInputRef = useRef<HTMLInputElement>(null);
   const [settings, setSettings] = useState<DisplaySettings>(DEFAULT_SETTINGS);
+  const [settingsSaveStatus, setSettingsSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const pendingSettingsPatchRef = useRef<Partial<DisplaySettings>>({});
+  const settingsDebounceTimerRef = useRef<any>(null);
+  const isFlushingSettingsRef = useRef(false);
+
   const [directoryHandle, setDirectoryHandle] = useState<any>(null);
+  const [savedDirectoryHandle, setSavedDirectoryHandle] = useState<any>(null);
+  const [savedFolderName, setSavedFolderName] = useState<string>(() => {
+    try {
+      return localStorage.getItem('obs_saved_folder_name') || '';
+    } catch {
+      return '';
+    }
+  });
   const [newEventTitle, setNewEventTitle] = useState('');
   const [newAdmin, setNewAdmin] = useState({ username: '', displayName: '', password: '' });
   const [editingAdmin, setEditingAdmin] = useState<{ id: string; username: string; displayName: string; password?: string } | null>(null);
@@ -448,6 +513,34 @@ export const AdminPanel: React.FC<{
 
   useEffect(() => {
     loadSettings();
+
+    // Restore previously selected OBS directory handle from IndexedDB if available
+    (async () => {
+      const storedHandle = await loadObsDirHandleFromIDB();
+      if (storedHandle) {
+        setSavedDirectoryHandle(storedHandle);
+        if (storedHandle.name) {
+          setSavedFolderName(storedHandle.name);
+        }
+        try {
+          if (typeof storedHandle.queryPermission === 'function') {
+            const perm = await storedHandle.queryPermission({ mode: 'readwrite' });
+            if (perm === 'granted') {
+              setDirectoryHandle(storedHandle);
+            }
+          }
+        } catch (e) {
+          console.warn('OBS directory permission check note:', e);
+        }
+      }
+    })();
+
+    return () => {
+      if (settingsDebounceTimerRef.current) {
+        clearTimeout(settingsDebounceTimerRef.current);
+      }
+      flushPendingSettings();
+    };
   }, []);
 
   useEffect(() => {
@@ -500,8 +593,6 @@ export const AdminPanel: React.FC<{
         } else if (data.length > 0) {
           setActiveEventId(data[0].id);
         }
-      } else {
-        setEvents([]);
       }
     } catch (err) {
       handleApiError(err);
@@ -513,8 +604,6 @@ export const AdminPanel: React.FC<{
       const data = await dbApi.donations.getByEvent(id || selectedEventId || 'all');
       if (Array.isArray(data)) {
         setDonations(data);
-      } else {
-        setDonations([]);
       }
     } catch (err) {
       handleApiError(err);
@@ -526,7 +615,12 @@ export const AdminPanel: React.FC<{
       const data = await dbApi.config.get('displaySettings');
       if (data?.value && typeof data.value === 'object') {
         const merged = { ...DEFAULT_SETTINGS, ...data.value };
-        setSettings(merged);
+        // Do not overwrite fields that the admin is actively editing right now
+        setSettings(prev => ({
+          ...prev,
+          ...merged,
+          ...pendingSettingsPatchRef.current
+        }));
       } else {
         const initial = { ...DEFAULT_SETTINGS };
         setSettings(initial);
@@ -542,17 +636,60 @@ export const AdminPanel: React.FC<{
       const data = await dbApi.admins.getAll();
       if (Array.isArray(data)) {
         setAdmins(data);
-      } else {
-        setAdmins([]);
       }
     } catch (err) {
       handleApiError(err);
     }
   };
 
-  const handleUpdateSettings = async (updates: Partial<DisplaySettings>) => {
-    setSettings(prev => ({ ...prev, ...updates }));
-    await dbApi.config.upsert('displaySettings', updates);
+  const flushPendingSettings = async () => {
+    if (isFlushingSettingsRef.current) return;
+    const patchToSave = { ...pendingSettingsPatchRef.current };
+    if (Object.keys(patchToSave).length === 0) return;
+
+    pendingSettingsPatchRef.current = {};
+    isFlushingSettingsRef.current = true;
+    setSettingsSaveStatus('saving');
+
+    try {
+      await dbApi.config.upsert('displaySettings', patchToSave);
+      // If more changes accumulated while saving, flush again
+      if (Object.keys(pendingSettingsPatchRef.current).length > 0) {
+        isFlushingSettingsRef.current = false;
+        await flushPendingSettings();
+        return;
+      }
+      setSettingsSaveStatus('saved');
+    } catch (err) {
+      console.error('Error saving settings:', err);
+      setSettingsSaveStatus('error');
+    } finally {
+      isFlushingSettingsRef.current = false;
+    }
+  };
+
+  const handleUpdateSettings = (updates: Partial<DisplaySettings>) => {
+    // Sanitize numeric fields so NaN never overwrites valid numbers
+    const cleanUpdates: Partial<DisplaySettings> = { ...updates };
+    for (const [k, v] of Object.entries(cleanUpdates)) {
+      if (typeof v === 'number' && isNaN(v)) {
+        (cleanUpdates as any)[k] = 0;
+      }
+    }
+
+    setSettings(prev => ({ ...prev, ...cleanUpdates }));
+    pendingSettingsPatchRef.current = {
+      ...pendingSettingsPatchRef.current,
+      ...cleanUpdates,
+    };
+    setSettingsSaveStatus('saving');
+
+    if (settingsDebounceTimerRef.current) {
+      clearTimeout(settingsDebounceTimerRef.current);
+    }
+    settingsDebounceTimerRef.current = setTimeout(() => {
+      flushPendingSettings();
+    }, 350);
   };
 
   const downloadFile = (filename: string, content: string) => {
@@ -569,13 +706,38 @@ export const AdminPanel: React.FC<{
     try {
       const handle = await (window as any).showDirectoryPicker({ mode: 'readwrite' });
       setDirectoryHandle(handle);
-      alert("پوشه با موفقیت انتخاب شد. فایل‌ها خودکار ذخیره می‌شوند.");
+      setSavedDirectoryHandle(handle);
+      if (handle?.name) {
+        setSavedFolderName(handle.name);
+      }
+      await saveObsDirHandleToIDB(handle);
+      alert(`پوشه «${handle?.name || 'انتخابی'}» با موفقیت ذخیره و متصل شد. در مراجعات بعدی نیز همین پوشه به‌خاطر سپرده می‌شود.`);
       generateObsFiles(handle);
     } catch (error: any) {
       if (error.name !== 'AbortError') {
         console.error(error);
         alert("خطا در انتخاب پوشه. مرورگر شما ممکن است پشتیبانی نکند.");
       }
+    }
+  };
+
+  const reconnectSavedDirectory = async () => {
+    if (!savedDirectoryHandle) {
+      return selectDirectory();
+    }
+    try {
+      if (typeof savedDirectoryHandle.requestPermission === 'function') {
+        const perm = await savedDirectoryHandle.requestPermission({ mode: 'readwrite' });
+        if (perm === 'granted') {
+          setDirectoryHandle(savedDirectoryHandle);
+          generateObsFiles(savedDirectoryHandle);
+          return;
+        }
+      }
+      // Fallback if permission was denied
+      await selectDirectory();
+    } catch (e) {
+      await selectDirectory();
     }
   };
 
@@ -1082,43 +1244,59 @@ export const AdminPanel: React.FC<{
   const handleAddDonation = async (e: React.FormEvent) => {
     e.preventDefault();
     const effectiveEventId = activeEventId || events.find(e => e.isactive)?.id || events[0]?.id;
-    if (!effectiveEventId || !donationForm.name || !donationForm.amount) {
+    const enteredThousandToman = parseInt(String(donationForm.amount).replace(/[^0-9]/g, ''), 10);
+    if (!effectiveEventId || !donationForm.name.trim() || !enteredThousandToman || isNaN(enteredThousandToman)) {
       if (!effectiveEventId) {
         alert('لطفاً ابتدا یک مراسم ایجاد یا فعال نمایید.');
       }
       return;
     }
+    // Multiply entered "thousand Toman" unit by 1,000 to store in full Tomans
+    const amountInTomans = enteredThousandToman * 1000;
+
     setLoading(true);
-    let data = null;
-    let error = null;
+    let data: any = null;
+    let error: any = null;
     const isSmsEnabled = settings?.enableTransactionSms !== false;
     try {
       data = await dbApi.donations.create({
         event_id: effectiveEventId,
-        donorName: donationForm.name,
-        fatherName: donationForm.father,
-        mobile: donationForm.mobile,
-        amount: parseInt(donationForm.amount),
-        description: donationForm.desc,
+        donorName: donationForm.name.trim(),
+        fatherName: donationForm.father.trim(),
+        mobile: donationForm.mobile.trim(),
+        amount: amountInTomans,
+        description: donationForm.desc.trim(),
         paymentType: donationForm.type,
         hideName: donationForm.hide,
         registeredBy: currentUser.displayName || currentUser.username,
         status: 'approved',
-        smsStatus: (isSmsEnabled && donationForm.mobile) ? 'pending' : 'not_sent'
+        smsStatus: (isSmsEnabled && donationForm.mobile.trim()) ? 'pending' : 'not_sent'
       });
     } catch(e: any) { 
       error = e; 
       alert('خطا در ثبت تراکنش: ' + (e?.response?.data?.error || e.message || 'خطای سرور'));
     }
-    if (!error && data) {
-        setDonationForm({ name: '', father: '', mobile: '', amount: '', desc: '', type: 'pos', hide: false });
-        if (window.innerWidth < 768) setMobileMenuOpen(false);
-        if (isSmsEnabled && data.mobile && data.mobile !== '-') {
-          await sendSms(data.mobile, settings?.smsDefaultText, data.id);
-        }
-        changeSelectedEvent(effectiveEventId);
-    }
     setLoading(false);
+
+    if (!error && data) {
+      // Immediately prepend the new transaction to state so the list never flickers or disappears
+      setDonations(prev => [data, ...prev.filter(d => d.id !== data.id)]);
+      setDonationForm({ name: '', father: '', mobile: '', amount: '', desc: '', type: donationForm.type || 'pos', hide: false });
+      if (window.innerWidth < 768) setMobileMenuOpen(false);
+
+      // Return cursor focus immediately to the Donor Name input field
+      setTimeout(() => {
+        donorNameInputRef.current?.focus();
+      }, 20);
+
+      // Refresh event list & donations and send SMS in the background without blocking next entry
+      changeSelectedEvent(effectiveEventId);
+      if (isSmsEnabled && data.mobile && data.mobile !== '-') {
+        sendSms(data.mobile, settings?.smsDefaultText, data.id).then(() => {
+          loadDonations(effectiveEventId);
+        }).catch(() => {});
+      }
+    }
   };
 
   const handleToggleDonationStatus = async (donation: Donation, action: 'approve' | 'reject' | 'pending') => {
@@ -1343,14 +1521,37 @@ export const AdminPanel: React.FC<{
 
           <form onSubmit={handleAddDonation} className="space-y-4 mt-2">
             <div>
-              <label className="text-[10px] font-bold text-slate-400 mb-1 block">نام پرداخت کننده *</label>
-              <input required className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-sm focus:ring-2 focus:ring-yellow-500 text-white placeholder-slate-500 transition-all" placeholder="مثال: علی رضایی" value={donationForm.name} onChange={e=>setDonationForm({...donationForm, name: e.target.value})} />
+              <label className="text-[10px] font-bold text-slate-400 mb-1 block">نام و نام خانوادگی پرداخت کننده *</label>
+              <input
+                ref={donorNameInputRef}
+                required
+                className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-sm focus:ring-2 focus:ring-yellow-500 text-white placeholder-slate-500 transition-all"
+                placeholder="مثال: علی رضایی"
+                value={donationForm.name}
+                onChange={e=>setDonationForm({...donationForm, name: e.target.value})}
+              />
             </div>
             
             <div className="bg-slate-800/50 p-3 rounded-lg border border-slate-700 space-y-3">
               <div>
-                <label className="text-[10px] font-bold text-slate-400 mb-1 block">مبلغ (تومان) *</label>
-                <CurrencyInput required className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-sm focus:ring-2 focus:ring-yellow-500 text-white placeholder-slate-500 transition-all" placeholder="0" value={donationForm.amount} onChange={val=>setDonationForm({...donationForm, amount: val})} />
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-[10px] font-bold text-yellow-400 block">مبلغ (به واحد هزار تومان) *</label>
+                  <span className="text-[10px] text-slate-400">مثال: 100 = ۱۰۰,۰۰۰ تومان</span>
+                </div>
+                <CurrencyInput
+                  required
+                  unitLabel="هزار تومان"
+                  className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-sm focus:ring-2 focus:ring-yellow-500 text-white placeholder-slate-500 transition-all"
+                  placeholder="مثال: 100"
+                  value={donationForm.amount}
+                  onChange={val=>setDonationForm({...donationForm, amount: val})}
+                />
+                {donationForm.amount && !isNaN(parseInt(donationForm.amount, 10)) && parseInt(donationForm.amount, 10) > 0 && (
+                  <div className="mt-1.5 px-2.5 py-1 rounded-md bg-emerald-950/60 border border-emerald-700/50 text-emerald-300 text-[11px] font-bold flex items-center justify-between">
+                    <span>مبلغ ثبت در لیست:</span>
+                    <span className="font-mono">{(parseInt(donationForm.amount, 10) * 1000).toLocaleString('fa-IR')} تومان</span>
+                  </div>
+                )}
               </div>
               
               <div>
@@ -1380,7 +1581,18 @@ export const AdminPanel: React.FC<{
             
             <div>
               <label className="text-[10px] font-bold text-slate-400 mb-1 block">توضیحات</label>
-              <textarea className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-sm h-16 focus:ring-2 focus:ring-yellow-500 text-white placeholder-slate-500 transition-all resize-none" placeholder="توضیحات تکمیلی..." value={donationForm.desc} onChange={e=>setDonationForm({...donationForm, desc: e.target.value})} />
+              <textarea
+                className="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-sm h-16 focus:ring-2 focus:ring-yellow-500 text-white placeholder-slate-500 transition-all resize-none"
+                placeholder="توضیحات تکمیلی... (با زدن Enter ثبت می‌شود)"
+                value={donationForm.desc}
+                onChange={e=>setDonationForm({...donationForm, desc: e.target.value})}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleAddDonation(e as any);
+                  }
+                }}
+              />
             </div>
             
             <label className="flex items-center gap-2 cursor-pointer p-2 hover:bg-slate-800/80 border border-transparent hover:border-slate-700 rounded-lg transition-all">
@@ -1388,8 +1600,8 @@ export const AdminPanel: React.FC<{
               <span className="text-xs text-slate-300">مخفی سازی نام در نمایشگر</span>
             </label>
             
-            <button type="submit" disabled={loading} className="w-full bg-yellow-500 hover:bg-yellow-600 text-slate-900 font-black py-3 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-yellow-500/20 active:scale-95 mt-2">
-              {loading ? <Spinner color="border-slate-900" /> : <><i className="fas fa-plus"></i> ثبت تراکنش</>}
+            <button type="submit" disabled={loading} className="w-full bg-yellow-500 hover:bg-yellow-600 text-slate-900 font-black py-3 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-yellow-500/20 active:scale-95 mt-2 cursor-pointer">
+              {loading ? <Spinner color="border-slate-900" /> : <><i className="fas fa-plus"></i> ثبت تراکنش (Enter)</>}
             </button>
           </form>
         </div>
@@ -1665,6 +1877,35 @@ export const AdminPanel: React.FC<{
                     <p className="text-xs text-slate-500 dark:text-slate-400">مدیریت دو حالت اصلی سامانه (خروجی متنی OBS / نمایشگر مستقیم وب)، پیامک و مدیران</p>
                   </div>
                 </div>
+
+                <div className="flex items-center gap-2.5">
+                  {settingsSaveStatus === 'saving' && (
+                    <span className="text-xs font-bold px-3 py-1.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 flex items-center gap-2">
+                      <Spinner size="w-3.5 h-3.5" color="border-amber-600" />
+                      <span>در حال ذخیره خودکار...</span>
+                    </span>
+                  )}
+                  {settingsSaveStatus === 'saved' && (
+                    <span className="text-xs font-bold px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 flex items-center gap-1.5">
+                      <i className="fas fa-check-circle text-emerald-500"></i>
+                      <span>تمام تغییرات ذخیره شد</span>
+                    </span>
+                  )}
+                  {settingsSaveStatus === 'error' && (
+                    <span className="text-xs font-bold px-3 py-1.5 rounded-xl bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800 flex items-center gap-1.5">
+                      <i className="fas fa-exclamation-circle text-red-500"></i>
+                      <span>خطا در ذخیره تنظیمات</span>
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => flushPendingSettings()}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black px-4 py-2 rounded-xl transition-all shadow-sm flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <i className="fas fa-save"></i>
+                    <span>ذخیره تغییرات</span>
+                  </button>
+                </div>
               </div>
 
               {/* Top Mode Selector Guidance Card */}
@@ -1804,25 +2045,47 @@ export const AdminPanel: React.FC<{
                           <i className="fas fa-folder-open text-blue-500"></i> انتخاب و اتصال پوشه ذخیره‌سازی روی کامپیوتر
                         </h4>
                         <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                          پوشه‌ای را انتخاب کنید تا فایل‌های متنی اسامی به‌صورت خودکار و لحظه‌ای در آن به‌روزرسانی شوند.
+                          پوشه انتخابی شما در مرورگر ذخیره می‌شود تا در ورودهای بعدی نیازی به انتخاب مجدد مسیر پوشه نباشد.
                         </p>
                       </div>
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2.5 flex-wrap">
                         <span className={`text-xs font-bold px-3 py-1.5 rounded-xl border flex items-center gap-1.5 ${
                           directoryHandle 
                             ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800' 
-                            : 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800'
+                            : savedFolderName
+                              ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800'
+                              : 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800'
                         }`}>
-                          <i className={`fas fa-circle text-[8px] ${directoryHandle ? 'text-emerald-500 animate-pulse' : 'text-amber-500'}`}></i>
-                          <span>{directoryHandle ? 'پوشه متصل است (به‌روزرسانی خودکار)' : 'پوشه انتخاب نشده است'}</span>
+                          <i className={`fas fa-circle text-[8px] ${
+                            directoryHandle ? 'text-emerald-500 animate-pulse' : savedFolderName ? 'text-blue-500' : 'text-amber-500'
+                          }`}></i>
+                          <span>
+                            {directoryHandle
+                              ? `پوشه متصل است: «${directoryHandle.name || savedFolderName}» (به‌روزرسانی خودکار)`
+                              : savedFolderName
+                                ? `پوشه ذخیره‌شده: «${savedFolderName}»`
+                                : 'پوشه انتخاب نشده است'}
+                          </span>
                         </span>
+
+                        {!directoryHandle && savedDirectoryHandle && (
+                          <button
+                            type="button"
+                            onClick={reconnectSavedDirectory}
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black px-4 py-2.5 rounded-xl transition-all shadow-md shadow-emerald-500/20 flex items-center gap-2 cursor-pointer"
+                          >
+                            <i className="fas fa-plug"></i>
+                            <span>فعال‌سازی پوشه ذخیره‌شده ({savedFolderName})</span>
+                          </button>
+                        )}
+
                         <button
                           type="button"
                           onClick={selectDirectory}
                           className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-black px-4 py-2.5 rounded-xl transition-all shadow-md shadow-blue-500/20 flex items-center gap-2 cursor-pointer"
                         >
                           <i className="fas fa-folder-plus"></i>
-                          <span>{directoryHandle ? 'تغییر پوشه ذخیره OBS' : 'انتخاب پوشه ذخیره (OBS)'}</span>
+                          <span>{directoryHandle || savedFolderName ? 'تغییر پوشه ذخیره OBS' : 'انتخاب پوشه ذخیره (OBS)'}</span>
                         </button>
                       </div>
                     </div>
@@ -1848,33 +2111,33 @@ export const AdminPanel: React.FC<{
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div>
                         <label className="text-xs font-bold text-slate-600 dark:text-slate-400 block mb-1">نام فایل خط پایین (عمومی)</label>
-                        <input className="w-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 dark:text-white rounded-xl p-2.5 text-left font-mono text-sm" dir="ltr" value={settings.obsFileLow || 'خط پايين.txt'} onChange={e=>handleUpdateSettings({obsFileLow: e.target.value})} />
+                        <input className="w-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 dark:text-white rounded-xl p-2.5 text-left font-mono text-sm" dir="ltr" value={settings.obsFileLow ?? 'خط پايين.txt'} onChange={e=>handleUpdateSettings({obsFileLow: e.target.value})} />
                       </div>
                       <div>
                         <label className="text-xs font-bold text-slate-600 dark:text-slate-400 block mb-1">نام فایل خط وسط (متوسط)</label>
-                        <input className="w-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 dark:text-white rounded-xl p-2.5 text-left font-mono text-sm" dir="ltr" value={settings.obsFileMid || 'خط وسط.txt'} onChange={e=>handleUpdateSettings({obsFileMid: e.target.value})} />
+                        <input className="w-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 dark:text-white rounded-xl p-2.5 text-left font-mono text-sm" dir="ltr" value={settings.obsFileMid ?? 'خط وسط.txt'} onChange={e=>handleUpdateSettings({obsFileMid: e.target.value})} />
                       </div>
                       <div>
                         <label className="text-xs font-bold text-slate-600 dark:text-slate-400 block mb-1">نام فایل خط بالا (ویژه)</label>
-                        <input className="w-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 dark:text-white rounded-xl p-2.5 text-left font-mono text-sm" dir="ltr" value={settings.obsFileHigh || 'خط بالا.txt'} onChange={e=>handleUpdateSettings({obsFileHigh: e.target.value})} />
+                        <input className="w-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 dark:text-white rounded-xl p-2.5 text-left font-mono text-sm" dir="ltr" value={settings.obsFileHigh ?? 'خط بالا.txt'} onChange={e=>handleUpdateSettings({obsFileHigh: e.target.value})} />
                       </div>
 
                       <div>
                         <label className="text-xs font-bold text-slate-600 dark:text-slate-400 block mb-1">ظرفیت خط پایین (تعداد نفرات)</label>
-                        <input type="number" className="w-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 dark:text-white rounded-xl p-2.5 text-center font-bold" value={settings.obsCapLow || 16} onChange={e=>handleUpdateSettings({obsCapLow: parseInt(e.target.value)})} />
+                        <input type="number" className="w-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 dark:text-white rounded-xl p-2.5 text-center font-bold" value={settings.obsCapLow ?? 16} onChange={e=>handleUpdateSettings({obsCapLow: parseInt(e.target.value, 10) || 0})} />
                       </div>
                       <div>
                         <label className="text-xs font-bold text-slate-600 dark:text-slate-400 block mb-1">ظرفیت خط وسط (تعداد نفرات)</label>
-                        <input type="number" className="w-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 dark:text-white rounded-xl p-2.5 text-center font-bold" value={settings.obsCapMid || 20} onChange={e=>handleUpdateSettings({obsCapMid: parseInt(e.target.value)})} />
+                        <input type="number" className="w-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 dark:text-white rounded-xl p-2.5 text-center font-bold" value={settings.obsCapMid ?? 20} onChange={e=>handleUpdateSettings({obsCapMid: parseInt(e.target.value, 10) || 0})} />
                       </div>
                       <div>
                         <label className="text-xs font-bold text-slate-600 dark:text-slate-400 block mb-1">ظرفیت خط بالا (تعداد نفرات)</label>
-                        <input type="number" className="w-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 dark:text-white rounded-xl p-2.5 text-center font-bold" value={settings.obsCapHigh || 10} onChange={e=>handleUpdateSettings({obsCapHigh: parseInt(e.target.value)})} />
+                        <input type="number" className="w-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 dark:text-white rounded-xl p-2.5 text-center font-bold" value={settings.obsCapHigh ?? 10} onChange={e=>handleUpdateSettings({obsCapHigh: parseInt(e.target.value, 10) || 0})} />
                       </div>
 
                       <div className="md:col-span-3">
                         <label className="text-xs font-bold text-slate-600 dark:text-slate-400 block mb-1">کاراکتر جداکننده بین اسامی در خروجی متنی</label>
-                        <input className="w-32 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 dark:text-white rounded-xl p-2.5 text-center font-bold" value={settings.obsSeparator || '-'} onChange={e=>handleUpdateSettings({obsSeparator: e.target.value})} />
+                        <input className="w-32 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 dark:text-white rounded-xl p-2.5 text-center font-bold" value={settings.obsSeparator ?? '-'} onChange={e=>handleUpdateSettings({obsSeparator: e.target.value})} />
                       </div>
 
                       <div className="md:col-span-3">
@@ -1894,11 +2157,11 @@ export const AdminPanel: React.FC<{
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="p-4 bg-blue-50/70 dark:bg-blue-950/30 rounded-xl border border-blue-200 dark:border-blue-800/60 space-y-1">
                         <label className="text-xs font-bold text-blue-800 dark:text-blue-300 block">مرز مبلغ خط متوسط برای فایل متنی (تومان)</label>
-                        <CurrencyInput className="w-full border-none bg-transparent font-black text-blue-900 dark:text-blue-200 text-lg outline-none" value={settings.obsThresholdMid ?? 60000} onChange={val=>handleUpdateSettings({obsThresholdMid: parseInt(val)})} />
+                        <CurrencyInput className="w-full border-none bg-transparent font-black text-blue-900 dark:text-blue-200 text-lg outline-none" value={settings.obsThresholdMid !== undefined && settings.obsThresholdMid !== null ? settings.obsThresholdMid : 60000} onChange={val=>handleUpdateSettings({obsThresholdMid: val === '' ? 0 : parseInt(val, 10)})} />
                       </div>
                       <div className="p-4 bg-yellow-50/70 dark:bg-yellow-950/30 rounded-xl border border-yellow-200 dark:border-yellow-800/60 space-y-1">
                         <label className="text-xs font-bold text-yellow-800 dark:text-yellow-300 block">مرز مبلغ خط بالا برای فایل متنی (تومان)</label>
-                        <CurrencyInput className="w-full border-none bg-transparent font-black text-yellow-900 dark:text-yellow-200 text-lg outline-none" value={settings.obsThresholdHigh ?? 150000} onChange={val=>handleUpdateSettings({obsThresholdHigh: parseInt(val)})} />
+                        <CurrencyInput className="w-full border-none bg-transparent font-black text-yellow-900 dark:text-yellow-200 text-lg outline-none" value={settings.obsThresholdHigh !== undefined && settings.obsThresholdHigh !== null ? settings.obsThresholdHigh : 150000} onChange={val=>handleUpdateSettings({obsThresholdHigh: val === '' ? 0 : parseInt(val, 10)})} />
                       </div>
                     </div>
                   </div>
@@ -2118,11 +2381,11 @@ export const AdminPanel: React.FC<{
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="p-4 bg-emerald-50/70 dark:bg-emerald-950/30 rounded-xl border border-emerald-200 dark:border-emerald-800/60 space-y-1">
                         <label className="text-xs font-bold text-emerald-800 dark:text-emerald-300 block">مرز سطح ویژه (High) برای مانیتور سالن</label>
-                        <CurrencyInput className="w-full border-none bg-transparent font-black text-emerald-900 dark:text-emerald-200 text-lg outline-none" value={settings.highThreshold} onChange={val=>handleUpdateSettings({highThreshold: parseInt(val)})} />
+                        <CurrencyInput className="w-full border-none bg-transparent font-black text-emerald-900 dark:text-emerald-200 text-lg outline-none" value={settings.highThreshold !== undefined && settings.highThreshold !== null ? settings.highThreshold : 5000000} onChange={val=>handleUpdateSettings({highThreshold: val === '' ? 0 : parseInt(val, 10)})} />
                       </div>
                       <div className="p-4 bg-blue-50/70 dark:bg-blue-950/30 rounded-xl border border-blue-200 dark:border-blue-800/60 space-y-1">
                         <label className="text-xs font-bold text-blue-800 dark:text-blue-300 block">مرز سطح متوسط (Mid) برای مانیتور سالن</label>
-                        <CurrencyInput className="w-full border-none bg-transparent font-black text-blue-900 dark:text-blue-200 text-lg outline-none" value={settings.midThreshold} onChange={val=>handleUpdateSettings({midThreshold: parseInt(val)})} />
+                        <CurrencyInput className="w-full border-none bg-transparent font-black text-blue-900 dark:text-blue-200 text-lg outline-none" value={settings.midThreshold !== undefined && settings.midThreshold !== null ? settings.midThreshold : 1000000} onChange={val=>handleUpdateSettings({midThreshold: val === '' ? 0 : parseInt(val, 10)})} />
                       </div>
                     </div>
                   </div>

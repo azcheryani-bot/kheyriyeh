@@ -9,9 +9,15 @@ const api = axios.create({
   }
 });
 
-let inMemoryToken: string | null = null;
+let inMemoryToken: string | null = (() => {
+  try {
+    return typeof window !== 'undefined' ? (localStorage.getItem('admin_token') || sessionStorage.getItem('host_token')) : null;
+  } catch (e) {
+    return null;
+  }
+})();
 
-// Interceptor to attach Authorization header if in-memory token exists
+// Interceptor to attach Authorization header if token exists
 api.interceptors.request.use((config) => {
   // Add timestamp to prevent aggressive browser/proxy caching
   if (config.method?.toLowerCase() === 'get') {
@@ -19,11 +25,19 @@ api.interceptors.request.use((config) => {
     config.params._t = Date.now();
   }
 
-  if (inMemoryToken) {
+  const token = inMemoryToken || (() => {
+    try {
+      return typeof window !== 'undefined' ? (localStorage.getItem('admin_token') || sessionStorage.getItem('host_token')) : null;
+    } catch (e) {
+      return null;
+    }
+  })();
+
+  if (token) {
     if (config.headers && typeof config.headers.set === 'function') {
-      config.headers.set('Authorization', `Bearer ${inMemoryToken}`);
+      config.headers.set('Authorization', `Bearer ${token}`);
     } else if (config.headers) {
-      (config.headers as any).Authorization = `Bearer ${inMemoryToken}`;
+      (config.headers as any).Authorization = `Bearer ${token}`;
     }
   }
   return config;
@@ -34,14 +48,19 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && error.response.status === 401) {
-      inMemoryToken = null;
-      try {
-        localStorage.removeItem('admin_token');
-        localStorage.removeItem('currentUser');
-        sessionStorage.clear();
-      } catch (e) {}
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('auth_unauthorized'));
+      const reqUrl = String(error.config?.url || '');
+      // Do not trigger global logout if 401 came from login attempt itself
+      if (!reqUrl.includes('/login')) {
+        inMemoryToken = null;
+        try {
+          localStorage.removeItem('admin_token');
+          localStorage.removeItem('currentUser');
+          sessionStorage.removeItem('host_token');
+          sessionStorage.removeItem('host_session');
+        } catch (e) {}
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('auth_unauthorized'));
+        }
       }
     }
     return Promise.reject(error);
@@ -57,9 +76,10 @@ export const dbApi = {
       if (res.data?.token) {
         inMemoryToken = res.data.token;
         try {
-          localStorage.removeItem('admin_token');
-          localStorage.removeItem('currentUser');
-          sessionStorage.clear();
+          localStorage.setItem('admin_token', res.data.token);
+          if (res.data.user) {
+            localStorage.setItem('currentUser', JSON.stringify(res.data.user));
+          }
         } catch (e) {}
       }
       return res.data;
@@ -74,7 +94,8 @@ export const dbApi = {
         try {
           localStorage.removeItem('admin_token');
           localStorage.removeItem('currentUser');
-          sessionStorage.clear();
+          sessionStorage.removeItem('host_token');
+          sessionStorage.removeItem('host_session');
         } catch (e) {}
       }
     },
@@ -95,6 +116,9 @@ export const dbApi = {
       const res = await api.post('/host/login', { username, password });
       if (res.data?.token) {
         inMemoryToken = res.data.token;
+        try {
+          sessionStorage.setItem('host_token', res.data.token);
+        } catch (e) {}
       }
       return res.data;
     },
@@ -103,6 +127,10 @@ export const dbApi = {
         await api.post('/logout');
       } catch (e) {}
       inMemoryToken = null;
+      try {
+        sessionStorage.removeItem('host_token');
+        sessionStorage.removeItem('host_session');
+      } catch (e) {}
     },
     getDonations: async () => (await api.get('/host/donations')).data,
   },

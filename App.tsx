@@ -37,11 +37,17 @@ const App: React.FC = () => {
       window.history.replaceState(null, '', '/');
     }
 
-    // Always clear session storage & localStorage on fresh load/reload so login is required every session refresh
+    // Restore active admin session if present so page refreshes do not force re-login
     try {
-      localStorage.removeItem('currentUser');
-      localStorage.removeItem('admin_token');
-      sessionStorage.clear();
+      const savedToken = localStorage.getItem('admin_token');
+      const savedUserRaw = localStorage.getItem('currentUser');
+      if (savedToken && savedUserRaw) {
+        const parsedUser = JSON.parse(savedUserRaw);
+        if (parsedUser && parsedUser.username) {
+          setCurrentUser(parsedUser);
+          setView('admin');
+        }
+      }
     } catch (e) {}
 
     const handleUnauthorized = () => {
@@ -51,7 +57,8 @@ const App: React.FC = () => {
       try {
         localStorage.removeItem('currentUser');
         localStorage.removeItem('admin_token');
-        sessionStorage.clear();
+        sessionStorage.removeItem('host_token');
+        sessionStorage.removeItem('host_session');
       } catch (e) {}
       changeView('login');
     };

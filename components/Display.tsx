@@ -60,7 +60,7 @@ const MarqueeRow = memo(({ list, speed, fontSize, font, heightClass, colorClass 
 
   return (
     // dir="ltr" is crucial here for correct calculate of translateX(-50%) to 0%
-    <div className={`${heightClass} w-full border-b border-white/10 relative overflow-hidden flex items-center ${colorClass} backdrop-blur-sm shadow-lg`} dir="ltr">
+    <div className={`${heightClass} w-full border-b border-white/10 relative overflow-hidden flex items-center ${colorClass}`} dir="ltr">
       <div 
         className="flex w-max will-change-transform items-center"
         style={{ 
@@ -70,23 +70,30 @@ const MarqueeRow = memo(({ list, speed, fontSize, font, heightClass, colorClass 
         {renderList.map((item, index) => (
           <div 
             key={`${item.id}-${index}`} 
-            className="flex flex-col items-center justify-center px-6 md:px-10 mx-2 py-2 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md shadow-xl flex-shrink-0"
+            dir="rtl"
+            className="inline-flex flex-row items-baseline justify-center gap-2 px-6 md:px-10 mx-2 py-1 flex-shrink-0"
             style={{ fontFamily: font, minWidth: 'fit-content' }}
           >
             <span 
-              className="font-bold whitespace-nowrap drop-shadow-lg text-yellow-50"
-              style={{ fontSize: `${fontSize}px`, lineHeight: '1.4' }}
+              className="font-bold whitespace-nowrap drop-shadow-[0_3px_6px_rgba(0,0,0,0.85)] text-yellow-50"
+              style={{ fontSize: `${fontSize}px`, lineHeight: '1.3' }}
             >
               {item.donorName}
             </span>
             {item.fatherName && (
               <span 
-                className="text-white/90 font-light mt-0.5 whitespace-nowrap tracking-wide"
-                style={{ fontSize: `${fontSize * 0.55}px` }}
+                className="text-white/90 font-normal whitespace-nowrap drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]"
+                style={{ fontSize: `${Math.round(fontSize * 0.72)}px`, lineHeight: '1.3' }}
               >
                 ({item.fatherName})
               </span>
             )}
+            <span
+              className="text-yellow-500/40 font-light select-none mr-4 md:mr-6"
+              style={{ fontSize: `${Math.round(fontSize * 0.65)}px` }}
+            >
+              •
+            </span>
           </div>
         ))}
       </div>
@@ -275,14 +282,14 @@ export const DisplayCore: React.FC<{ onExit: () => void }> = ({ onExit }) => {
         </div>
 
         {/* Marquee Lists */}
-        <div className="flex-grow flex flex-col w-full min-h-0 bg-black/10">
+        <div className="flex-grow flex flex-col w-full min-h-0 bg-black/20">
           <MarqueeRow 
             list={tiers.high} 
             speed={speedHigh}
             fontSize={fontSizeHigh} 
             font={settings.fontHigh}
             heightClass="h-[38%]"
-            colorClass="bg-gradient-to-r from-yellow-900/30 via-yellow-900/10 to-yellow-900/30 border-yellow-500/20"
+            colorClass="bg-transparent border-white/10"
           />
           <MarqueeRow 
             list={tiers.mid} 
@@ -290,7 +297,7 @@ export const DisplayCore: React.FC<{ onExit: () => void }> = ({ onExit }) => {
             fontSize={fontSizeMid} 
             font={settings.fontMid}
             heightClass="h-[32%]"
-            colorClass="bg-gradient-to-r from-blue-900/30 via-blue-900/10 to-blue-900/30 border-blue-500/20"
+            colorClass="bg-transparent border-white/10"
           />
           <MarqueeRow 
             list={tiers.low} 
@@ -298,7 +305,7 @@ export const DisplayCore: React.FC<{ onExit: () => void }> = ({ onExit }) => {
             fontSize={fontSizeLow} 
             font={settings.fontLow}
             heightClass="h-[30%]"
-            colorClass="bg-gradient-to-r from-slate-900/40 via-slate-800/20 to-slate-900/40 border-white/5"
+            colorClass="bg-transparent border-white/5"
           />
         </div>
 

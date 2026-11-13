@@ -250,25 +250,15 @@
         .tier-mid  { height: 32%; }
         .tier-low  { height: 30%; }
 
-        .tier-high-active {
-            background: -webkit-linear-gradient(left, rgba(113, 63, 18, 0.35), rgba(113, 63, 18, 0.12), rgba(113, 63, 18, 0.35));
-            background: linear-gradient(to right, rgba(113, 63, 18, 0.35), rgba(113, 63, 18, 0.12), rgba(113, 63, 18, 0.35));
-            border-bottom-color: rgba(234, 179, 8, 0.25);
-        }
-
-        .tier-mid-active {
-            background: -webkit-linear-gradient(left, rgba(30, 58, 138, 0.35), rgba(30, 58, 138, 0.12), rgba(30, 58, 138, 0.35));
-            background: linear-gradient(to right, rgba(30, 58, 138, 0.35), rgba(30, 58, 138, 0.12), rgba(30, 58, 138, 0.35));
-            border-bottom-color: rgba(59, 130, 246, 0.25);
-        }
-
+        .tier-high-active,
+        .tier-mid-active,
         .tier-low-active {
-            background: -webkit-linear-gradient(left, rgba(15, 23, 42, 0.45), rgba(30, 41, 59, 0.22), rgba(15, 23, 42, 0.45));
-            background: linear-gradient(to right, rgba(15, 23, 42, 0.45), rgba(30, 41, 59, 0.22), rgba(15, 23, 42, 0.45));
+            background: transparent;
+            border-bottom-color: rgba(255, 255, 255, 0.08);
         }
 
         .tier-empty {
-            background-color: rgba(0, 0, 0, 0.12);
+            background-color: transparent;
         }
 
         .marquee-content {
@@ -303,18 +293,18 @@
         .donor-card {
             display: -webkit-inline-flex;
             display: inline-flex;
-            -webkit-flex-direction: column;
-            flex-direction: column;
-            -webkit-align-items: center;
-            align-items: center;
+            -webkit-flex-direction: row;
+            flex-direction: row;
+            -webkit-align-items: baseline;
+            align-items: baseline;
             -webkit-justify-content: center;
             justify-content: center;
-            padding: 8px 32px;
-            margin: 0 10px;
-            border-radius: 16px;
-            border: 1px solid rgba(255, 255, 255, 0.14);
-            background-color: rgba(255, 255, 255, 0.06);
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+            direction: rtl;
+            padding: 4px 28px;
+            margin: 0 8px;
+            border: none;
+            background: transparent;
+            box-shadow: none;
             -webkit-flex-shrink: 0;
             flex-shrink: 0;
         }
@@ -323,14 +313,23 @@
             font-weight: 700;
             white-space: nowrap;
             color: #fefce8;
-            line-height: 1.4;
-            text-shadow: 0 3px 6px rgba(0, 0, 0, 0.75);
+            line-height: 1.3;
+            text-shadow: 0 3px 6px rgba(0, 0, 0, 0.85);
         }
 
         .donor-father {
-            color: rgba(255, 255, 255, 0.88);
+            color: rgba(255, 255, 255, 0.9);
+            font-weight: 400;
+            margin-right: 8px;
+            white-space: nowrap;
+            line-height: 1.3;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+        }
+
+        .donor-sep {
+            color: rgba(234, 179, 8, 0.45);
             font-weight: 300;
-            margin-top: 2px;
+            margin-right: 24px;
             white-space: nowrap;
         }
 
@@ -613,6 +612,7 @@
             function createMarqueeItem(item, fontSize, font) {
                 var div = document.createElement('div');
                 div.className = 'donor-card';
+                div.setAttribute('dir', 'rtl');
                 div.style.fontFamily = (font || 'Vazirmatn') + ', Tahoma, sans-serif';
 
                 var nameSpan = document.createElement('span');
@@ -624,10 +624,16 @@
                 if (item.fatherName) {
                     var fatherSpan = document.createElement('span');
                     fatherSpan.className = 'donor-father';
-                    fatherSpan.style.fontSize = Math.round(fontSize * 0.55) + 'px';
+                    fatherSpan.style.fontSize = Math.round(fontSize * 0.72) + 'px';
                     fatherSpan.textContent = '(' + item.fatherName + ')';
                     div.appendChild(fatherSpan);
                 }
+
+                var sepSpan = document.createElement('span');
+                sepSpan.className = 'donor-sep';
+                sepSpan.style.fontSize = Math.round(fontSize * 0.65) + 'px';
+                sepSpan.textContent = '•';
+                div.appendChild(sepSpan);
 
                 return div;
             }

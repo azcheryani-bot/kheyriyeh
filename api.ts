@@ -27,6 +27,7 @@ const UUID_REGEX = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}
 // Active Session Tokens Store
 interface SessionData {
   id: string;
+  jti?: string;
   username: string;
   displayName?: string;
   role: string;
@@ -37,22 +38,30 @@ interface SessionData {
 const activeSessions = new Map<string, SessionData>();
 const revokedTokens = new Set<string>();
 
-let dynamicSessionSecret: string | null = null;
+const SESSION_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 function getSessionSecret(): string {
   if (process.env.SESSION_SECRET) {
     return process.env.SESSION_SECRET;
   }
-  if (!dynamicSessionSecret) {
-    dynamicSessionSecret = crypto.randomBytes(32).toString('hex');
-  }
-  return dynamicSessionSecret;
+  const deterministicSeed =
+    process.env.DATABASE_URL ||
+    process.env.SUPERADMIN_PASSWORD ||
+    'kheyriyeh-ekram-persistent-jwt-hmac-secret-2026';
+  return crypto
+    .createHash('sha256')
+    .update(`${deterministicSeed}:kheyriyeh-multi-admin-session-v2`)
+    .digest('hex');
 }
 
 function signToken(payload: SessionData): string {
   const secret = getSessionSecret();
+  const payloadWithJti: SessionData = {
+    ...payload,
+    jti: payload.jti || crypto.randomUUID(),
+  };
   const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
-  const body = Buffer.from(JSON.stringify(payload)).toString('base64url');
+  const body = Buffer.from(JSON.stringify(payloadWithJti)).toString('base64url');
   const signature = crypto
     .createHmac('sha256', secret)
     .update(`${header}.${body}`)
@@ -76,8 +85,7 @@ function verifyToken(token: string): SessionData | null {
     }
 
     const payload: SessionData = JSON.parse(Buffer.from(body, 'base64url').toString('utf-8'));
-    // Valid for 12 hours
-    if (Date.now() - payload.createdAt > 12 * 60 * 60 * 1000) {
+    if (Date.now() - payload.createdAt > SESSION_TTL_MS) {
       return null;
     }
     return payload;
@@ -199,8 +207,8 @@ export function requireAuth(req: Request & { user?: SessionData }, res: Response
     return res.status(401).json({ success: false, error: 'دسترسی غیرمجاز برای پنل مدیریت.' });
   }
 
-  // Session valid for 12 hours
-  if (Date.now() - session.createdAt > 12 * 60 * 60 * 1000) {
+  // Session valid for 24 hours
+  if (Date.now() - session.createdAt > SESSION_TTL_MS) {
     activeSessions.delete(token);
     return res.status(401).json({ success: false, error: 'زمان نشست به پایان رسیده است. مجدداً وارد شوید.' });
   }
@@ -237,8 +245,8 @@ export function requireHostAuth(req: Request & { hostSession?: { eventId: string
     return res.status(401).json({ success: false, error: 'نشست کاربری نامعتبر است. مجدداً وارد شوید.' });
   }
 
-  // Session valid for 12 hours
-  if (Date.now() - session.createdAt > 12 * 60 * 60 * 1000) {
+  // Session valid for 24 hours
+  if (Date.now() - session.createdAt > SESSION_TTL_MS) {
     activeSessions.delete(token);
     return res.status(401).json({ success: false, error: 'زمان نشست به پایان رسیده است. مجدداً وارد شوید.' });
   }
@@ -595,28 +603,37 @@ apiRouter.delete('/events/:id', requireAuth, async (req, res) => {
 
 // Admin: Get All Donations for Event (or all events if 'all' or non-UUID is passed)
 apiRouter.get('/donations/:eventId', requireAuth, async (req, res) => {
-  try {
+  const fetchByEvent = async () => {
     const eventId = String(req.params.eventId);
-    
+
     if (eventId === 'active') {
       const activeEvent = await db.select().from(events).where(eq(events.isactive, true)).limit(1);
       if (activeEvent.length > 0) {
-        const data = await db.select(donationSelectFields).from(donations).where(eq(donations.event_id, activeEvent[0].id)).orderBy(desc(donations.createdAt));
-        return res.json(data);
+        return await db.select(donationSelectFields).from(donations).where(eq(donations.event_id, activeEvent[0].id)).orderBy(desc(donations.createdAt));
       }
-      return res.json([]);
+      return [];
     }
 
     if (!eventId || eventId === 'all' || eventId === 'undefined' || eventId === 'null' || !UUID_REGEX.test(eventId)) {
-      const data = await db.select(donationSelectFields).from(donations).orderBy(desc(donations.createdAt));
-      return res.json(data);
+      return await db.select(donationSelectFields).from(donations).orderBy(desc(donations.createdAt));
     }
 
-    const data = await db.select(donationSelectFields).from(donations).where(eq(donations.event_id, eventId)).orderBy(desc(donations.createdAt));
+    return await db.select(donationSelectFields).from(donations).where(eq(donations.event_id, eventId)).orderBy(desc(donations.createdAt));
+  };
+
+  try {
+    const data = await fetchByEvent();
     res.json(data);
   } catch (err) {
-    console.error('Error fetching donations:', err);
-    res.status(500).json({ error: 'Database error' });
+    // Single fast retry for transient serverless DB hiccups
+    try {
+      await new Promise(r => setTimeout(r, 200));
+      const retryData = await fetchByEvent();
+      return res.json(retryData);
+    } catch (retryErr) {
+      console.error('Error fetching donations:', retryErr);
+      res.status(500).json({ error: 'Database error' });
+    }
   }
 });
 
@@ -787,43 +804,50 @@ apiRouter.get('/config/:key', async (req, res) => {
   }
 });
 
-// Admin: Upsert Config Key
+// Admin: Upsert Config Key (Atomic JSONB merge to prevent race conditions on rapid typing)
 apiRouter.post('/config', requireAuth, async (req: Request & { user?: SessionData }, res) => {
   try {
     const { key, value } = req.body;
+    if (!key) {
+      return res.status(400).json({ success: false, error: 'کلید تنظیمات مشخص نشده است.' });
+    }
     const isSuperAdmin = req.user?.role === 'superadmin';
 
-    const existing = await db.select().from(config).where(eq(config.key, key)).limit(1);
-    if (existing.length > 0) {
-      let finalValue = value;
-      if (typeof value === 'object' && value !== null) {
-        const oldVal = (existing[0].value as any) || {};
-        // Merge with existing values to ensure no fields are lost
-        finalValue = { ...oldVal, ...value };
-        
-        // Prevent regular admins from overwriting sensitive or super-admin-only fields
-        if (key === 'displaySettings' && !isSuperAdmin) {
-          finalValue = {
-            ...finalValue,
-            smsUser: oldVal.smsUser !== undefined ? oldVal.smsUser : '',
-            smsPass: oldVal.smsPass !== undefined ? oldVal.smsPass : '',
-            smsFrom: oldVal.smsFrom !== undefined ? oldVal.smsFrom : '',
-            githubToken: oldVal.githubToken !== undefined ? oldVal.githubToken : '',
-            githubRepo: oldVal.githubRepo !== undefined ? oldVal.githubRepo : '',
-            githubWorkflow: oldVal.githubWorkflow !== undefined ? oldVal.githubWorkflow : '',
-            streamTargetUrl: oldVal.streamTargetUrl !== undefined ? oldVal.streamTargetUrl : '',
-            streamWorkerUrl: oldVal.streamWorkerUrl !== undefined ? oldVal.streamWorkerUrl : '',
-            streamNeonUrl: oldVal.streamNeonUrl !== undefined ? oldVal.streamNeonUrl : '',
-            streamQuality: oldVal.streamQuality !== undefined ? oldVal.streamQuality : '',
-            streamFps: oldVal.streamFps !== undefined ? oldVal.streamFps : 30,
-            streamDuration: oldVal.streamDuration !== undefined ? oldVal.streamDuration : 60,
-          };
-        }
-      }
-      await db.update(config).set({ value: finalValue }).where(eq(config.key, key));
-    } else {
-      await db.insert(config).values({ key, value });
+    let sanitizedPatch: any = value && typeof value === 'object' ? { ...value } : value;
+
+    // Prevent regular admins from overwriting sensitive or super-admin-only fields
+    if (key === 'displaySettings' && !isSuperAdmin && typeof sanitizedPatch === 'object' && sanitizedPatch !== null) {
+      delete sanitizedPatch.smsUser;
+      delete sanitizedPatch.smsPass;
+      delete sanitizedPatch.smsFrom;
+      delete sanitizedPatch.githubToken;
+      delete sanitizedPatch.githubRepo;
+      delete sanitizedPatch.githubWorkflow;
+      delete sanitizedPatch.streamTargetUrl;
+      delete sanitizedPatch.streamWorkerUrl;
+      delete sanitizedPatch.streamNeonUrl;
+      delete sanitizedPatch.streamQuality;
+      delete sanitizedPatch.streamFps;
+      delete sanitizedPatch.streamDuration;
     }
+
+    if (typeof sanitizedPatch === 'object' && sanitizedPatch !== null) {
+      const jsonPatch = JSON.stringify(sanitizedPatch);
+      await db.execute(sql`
+        INSERT INTO "config" ("key", "value")
+        VALUES (${String(key)}, ${jsonPatch}::jsonb)
+        ON CONFLICT ("key")
+        DO UPDATE SET "value" = COALESCE("config"."value", '{}'::jsonb) || ${jsonPatch}::jsonb
+      `);
+    } else {
+      const existing = await db.select().from(config).where(eq(config.key, String(key))).limit(1);
+      if (existing.length > 0) {
+        await db.update(config).set({ value: sanitizedPatch }).where(eq(config.key, String(key)));
+      } else {
+        await db.insert(config).values({ key: String(key), value: sanitizedPatch });
+      }
+    }
+
     broadcastDbChange();
     res.json({ success: true });
   } catch (err: any) {
