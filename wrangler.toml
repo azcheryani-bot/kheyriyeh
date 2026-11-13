@@ -13,3 +13,4 @@ not_found_handling = "single-page-application"
 [vars]
 # Define non-secret environment variables here
 # DATABASE_URL and SESSION_SECRET should be set using wrangler secret put <KEY>
+
