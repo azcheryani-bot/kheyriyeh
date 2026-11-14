@@ -7,6 +7,7 @@ and continuously uploads HLS .m3u8 and .ts segments to Neon S3 storage.
 
 import argparse
 import os
+import re
 import time
 import json
 import threading
@@ -28,6 +29,14 @@ S3_SECRET_KEY = os.getenv("AWS_SECRET_ACCESS_KEY", "").strip()
 S3_REGION = os.getenv("AWS_DEFAULT_REGION", "us-east-2").strip()
 BUCKET_NAME = os.getenv("S3_BUCKET_NAME", "").strip()
 
+# تعداد سگمنت‌های بافر امنیتی در باکت (پیش‌فرض: ۳۰ سگمنت ≈ ۲ دقیقه حاشیه امن)
+try:
+    S3_KEEP_SEGMENTS = max(1, int((os.getenv("S3_KEEP_SEGMENTS") or "30").strip()))
+except ValueError:
+    S3_KEEP_SEGMENTS = 30
+
+S3_SWEEP_INTERVAL_SECONDS = 60
+
 s3_client = boto3.client(
     's3',
     endpoint_url=S3_ENDPOINT,
@@ -37,22 +46,173 @@ s3_client = boto3.client(
     config=Config(signature_version='s3v4')
 )
 
-def purge_bucket():
-    print("🧹 در حال پاک‌سازی باکت نئون...")
+
+def _segment_sort_key(filename):
+    """استخراج شماره سگمنت برای مرتب‌سازی عددی دقیق (مثلاً live99.ts قبل از live100.ts)."""
+    base = os.path.basename(filename)
+    match = re.search(r'(\d+)\.ts$', base)
+    if match:
+        return (0, int(match.group(1)), base)
+    return (1, 0, base)
+
+
+def _read_playlist_segments(m3u8_path="live.m3u8"):
+    """استخراج نام سگمنت‌های .ts ارجاع‌شده در نسخهٔ فعلی live.m3u8."""
+    segments = set()
+    if not os.path.exists(m3u8_path):
+        return segments
     try:
-        response = s3_client.list_objects_v2(Bucket=BUCKET_NAME)
-        if 'Contents' in response:
-            objects_to_delete = [{'Key': obj['Key']} for obj in response['Contents']]
-            s3_client.delete_objects(Bucket=BUCKET_NAME, Delete={'Objects': objects_to_delete})
-            print("✨ باکت نئون تخلیه شد.")
+        with open(m3u8_path, "r", encoding="utf-8", errors="ignore") as f:
+            for raw_line in f:
+                line = raw_line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                clean_name = os.path.basename(line.split("?")[0].strip())
+                if clean_name.endswith(".ts"):
+                    segments.add(clean_name)
     except Exception as e:
-        print(f"⚠️ پیام وضعیت باکت: {e}")
+        print(f"⚠️ هشدار در خواندن فایل پلی‌لیست {m3u8_path}: {e}")
+    return segments
+
+
+def compute_retention_set(playlist_segments, uploaded_order, keep_segments=None):
+    """
+    محاسبه مجموعهٔ سگمنت‌هایی که باید در باکت باقی بمانند:
+    سگمنت‌های موجود در نسخهٔ فعلی live.m3u8 + آخرین S3_KEEP_SEGMENTS سگمنت آپلودشده.
+    """
+    if keep_segments is None:
+        keep_segments = S3_KEEP_SEGMENTS
+    keep_count = max(1, int(keep_segments))
+
+    ordered_unique = sorted(set(uploaded_order), key=_segment_sort_key)
+    recent_buffer = set(ordered_unique[-keep_count:]) if ordered_unique else set()
+    active_playlist = set(playlist_segments or ())
+
+    # هرگز live.m3u8 یا سگمنت‌های داخل پلی‌لیست فعلی حذف نمی‌شوند
+    return active_playlist | recent_buffer | {"live.m3u8"}
+
+
+def _delete_s3_keys_batched(keys_to_delete, context_label="حذف لغزان"):
+    """حذف دسته‌ای کلیدها از باکت S3 در دسته‌های حداکثر ۱۰۰۰تایی با حفاظت از live.m3u8."""
+    safe_keys = [k for k in keys_to_delete if k and k != "live.m3u8"]
+    if not safe_keys:
+        return set()
+
+    deleted_keys = set()
+    for i in range(0, len(safe_keys), 1000):
+        batch = safe_keys[i:i + 1000]
+        try:
+            s3_client.delete_objects(
+                Bucket=BUCKET_NAME,
+                Delete={'Objects': [{'Key': k} for k in batch], 'Quiet': True}
+            )
+            deleted_keys.update(batch)
+        except Exception as e:
+            print(f"⚠️ هشدار در {context_label} از باکت نئون: {e}")
+    return deleted_keys
+
+
+def purge_bucket():
+    print("🧹 در حال پاک‌سازی کامل باکت نئون (با صفحه‌بندی)...")
+    total_deleted = 0
+    try:
+        while True:
+            keys_in_pass = []
+            continuation_token = None
+
+            while True:
+                list_kwargs = {'Bucket': BUCKET_NAME, 'MaxKeys': 1000}
+                if continuation_token:
+                    list_kwargs['ContinuationToken'] = continuation_token
+
+                response = s3_client.list_objects_v2(**list_kwargs)
+                contents = response.get('Contents') or []
+                for obj in contents:
+                    key = obj.get('Key')
+                    if key:
+                        keys_in_pass.append(key)
+
+                if response.get('IsTruncated') and response.get('NextContinuationToken'):
+                    continuation_token = response['NextContinuationToken']
+                else:
+                    break
+
+            if not keys_in_pass:
+                break
+
+            deleted_in_pass = 0
+            for i in range(0, len(keys_in_pass), 1000):
+                batch = keys_in_pass[i:i + 1000]
+                s3_client.delete_objects(
+                    Bucket=BUCKET_NAME,
+                    Delete={'Objects': [{'Key': k} for k in batch], 'Quiet': True}
+                )
+                deleted_in_pass += len(batch)
+                total_deleted += len(batch)
+
+            if deleted_in_pass == 0:
+                break
+
+        print(f"✨ باکت نئون به طور کامل تخلیه شد (تعداد کل فایل‌های حذف‌شده: {total_deleted}).")
+    except Exception as e:
+        print(f"⚠️ پیام وضعیت باکت (حذف‌شده تا این لحظه: {total_deleted}): {e}")
+
+
+def _periodic_bucket_sweep(uploaded_order):
+    """جاروب امنیتی دوره‌ای باکت با صفحه‌بندی برای حذف هر سگمنت .ts خارج از مجموعهٔ نگهداری."""
+    try:
+        playlist_segments = _read_playlist_segments("live.m3u8")
+        keep_set = compute_retention_set(playlist_segments, uploaded_order, S3_KEEP_SEGMENTS)
+
+        # اگر هنوز هیچ سگمنتی در پلی‌لیست و تاریخچه آپلود ثبت نشده، از حذف خودداری شود
+        if not playlist_segments and not uploaded_order:
+            return
+
+        continuation_token = None
+        stale_remote_keys = []
+
+        while True:
+            list_kwargs = {'Bucket': BUCKET_NAME, 'MaxKeys': 1000}
+            if continuation_token:
+                list_kwargs['ContinuationToken'] = continuation_token
+
+            response = s3_client.list_objects_v2(**list_kwargs)
+            contents = response.get('Contents') or []
+            for obj in contents:
+                key = obj.get('Key')
+                if not key or key == "live.m3u8":
+                    continue
+                if key.endswith(".ts") and key not in keep_set:
+                    stale_remote_keys.append(key)
+
+            if response.get('IsTruncated') and response.get('NextContinuationToken'):
+                continuation_token = response['NextContinuationToken']
+            else:
+                break
+
+        if stale_remote_keys:
+            # پیش از حذف، یک بار دیگر پلی‌لیست فعلی بررسی شود تا سگمنت تازه‌وارد حذف نشود
+            latest_playlist = _read_playlist_segments("live.m3u8")
+            final_keep_set = compute_retention_set(latest_playlist, uploaded_order, S3_KEEP_SEGMENTS)
+            final_to_delete = [k for k in stale_remote_keys if k not in final_keep_set and k != "live.m3u8"]
+            if final_to_delete:
+                deleted = _delete_s3_keys_batched(final_to_delete, context_label="جاروب امنیتی دوره‌ای")
+                if deleted:
+                    print(f"🧹 جاروب امنیتی دوره‌ای: {len(deleted)} سگمنت قدیمی از باکت نئون پاک شد.")
+    except Exception as e:
+        print(f"⚠️ هشدار در جاروب امنیتی دوره‌ای باکت: {e}")
+
 
 def s3_sync_worker(stop_event):
     uploaded_files = set()
-    print("☁️ همگام‌ساز خودکار به حافظه ابری نئون فعال شد.")
+    uploaded_order = []
+    last_sweep_time = time.time()
+    print(f"☁️ همگام‌ساز خودکار به حافظه ابری نئون فعال شد (بافر نگهداری: {S3_KEEP_SEGMENTS} سگمنت).")
+
     while not stop_event.is_set():
-        for ts_file in glob.glob("*.ts"):
+        # ۱. آپلود سگمنت‌های جدید به ترتیب شماره سگمنت
+        local_ts_files = sorted(glob.glob("*.ts"), key=_segment_sort_key)
+        for ts_file in local_ts_files:
             if ts_file not in uploaded_files and os.path.exists(ts_file):
                 try:
                     s3_client.upload_file(
@@ -63,9 +223,11 @@ def s3_sync_worker(stop_event):
                         }
                     )
                     uploaded_files.add(ts_file)
-                except Exception:
-                    pass
-        
+                    uploaded_order.append(ts_file)
+                except Exception as e:
+                    print(f"⚠️ هشدار در آپلود سگمنت {ts_file}: {e}")
+
+        # ۲. آپلود مداوم پلی‌لیست live.m3u8
         if os.path.exists("live.m3u8"):
             try:
                 s3_client.upload_file(
@@ -75,8 +237,30 @@ def s3_sync_worker(stop_event):
                         'CacheControl': 'no-cache, no-store, must-revalidate, max-age=0'
                     }
                 )
-            except Exception:
-                pass
+            except Exception as e:
+                print(f"⚠️ هشدار در آپلود پلی‌لیست live.m3u8: {e}")
+
+        # ۳. حذف لغزان سگمنت‌های خارج از مجموعهٔ نگهداری (پلی‌لیست فعلی + بافر S3_KEEP_SEGMENTS)
+        try:
+            playlist_segments = _read_playlist_segments("live.m3u8")
+            keep_set = compute_retention_set(playlist_segments, uploaded_order, S3_KEEP_SEGMENTS)
+            candidates_to_delete = [
+                seg for seg in uploaded_order
+                if seg not in keep_set and seg != "live.m3u8"
+            ]
+            if candidates_to_delete:
+                deleted_keys = _delete_s3_keys_batched(candidates_to_delete, context_label="حذف لغزان سگمنت‌ها")
+                if deleted_keys:
+                    uploaded_order = [seg for seg in uploaded_order if seg not in deleted_keys]
+                    uploaded_files.difference_update(deleted_keys)
+        except Exception as e:
+            print(f"⚠️ هشدار در چرخهٔ حذف لغزان: {e}")
+
+        # ۴. جاروب امنیتی دوره‌ای باکت (هر ۶۰ ثانیه)
+        now = time.time()
+        if now - last_sweep_time >= S3_SWEEP_INTERVAL_SECONDS:
+            _periodic_bucket_sweep(uploaded_order)
+            last_sweep_time = time.time()
 
         time.sleep(0.5)
 
